@@ -5,4 +5,4 @@
  * thinking before emitting the answer, so this stays well above what the
  * requested prose or JSON itself needs.
  */
-export const MAX_OUTPUT_TOKENS = 256_000;
+export const MAX_OUTPUT_TOKENS = 384_000;

@@ -65,6 +65,12 @@ describe("createProject", () => {
     expect(createProject({ premise }).id).not.toBe(createProject({ premise }).id);
   });
 
+  it("allows up to 200 initial chapters", () => {
+    const project = createProject({ premise, maxChapters: 200 });
+
+    expect(project.maxChapters).toBe(200);
+  });
+
   it.each(["", "   "])("rejects an empty premise (%j)", (value) => {
     expect(() => createProject({ premise: value })).toThrow(/premise/i);
   });
@@ -72,7 +78,7 @@ describe("createProject", () => {
   it.each([
     { chapterWords: 100 },
     { maxChapters: 0 },
-    { maxChapters: 41 },
+    { maxChapters: 201 },
     { targetWords: 100 },
   ])("rejects invalid values: %j", (overrides) => {
     expect(() => createProject({ premise, ...overrides })).toThrow();

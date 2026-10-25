@@ -194,7 +194,7 @@ describe("writeChapter", () => {
     expect(result.text).not.toContain(`短。\n\n${second}`);
   });
 
-  it("requests the 256k output budget for chapter generation", async () => {
+  it("requests the 384k output budget for chapter generation", async () => {
     const project = makeProject();
     const bible = makeBible(6);
     const outline = makeOutline(6, 2500);
@@ -210,7 +210,7 @@ describe("writeChapter", () => {
       state: makeState(),
     });
 
-    expect(gateway.requests[0]!.maxTokens).toBe(256000);
+    expect(gateway.requests[0]!.maxTokens).toBe(384000);
   });
 
   it("trims overlong text at a sentence boundary", async () => {
@@ -325,7 +325,7 @@ describe("reviewChapter", () => {
     expect(review.issues).toHaveLength(1);
     expect(review.issues[0]!.problem).toContain("苏晚");
     expect(gateway.requests[0]!.kind).toBe("review");
-    expect(gateway.requests[0]!.maxTokens).toBe(256000);
+    expect(gateway.requests[0]!.maxTokens).toBe(384000);
     expect(gateway.requests[0]!.user).toContain(chapter.text);
   });
 

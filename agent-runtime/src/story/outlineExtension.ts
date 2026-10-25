@@ -2,9 +2,7 @@ import type { AiGateway } from "../ai/gateway.js";
 import { parseWithSchema } from "../ai/json.js";
 import { MAX_OUTPUT_TOKENS } from "../ai/limits.js";
 import {
-  MAX_BOOK_CHAPTERS,
   MAX_EXTENSION_BATCH,
-  MAX_TARGET_WORDS,
   OutlineExtensionSchema,
   OutlineSchema,
   validateOutline,
@@ -114,21 +112,7 @@ export async function extendOutline(
     )) + 1;
   const endChapter = startChapter + additionalChapters - 1;
   const totalChapters = endChapter;
-
-  if (totalChapters > MAX_BOOK_CHAPTERS) {
-    throw new OutlineExtensionError(
-      `单本最多 ${MAX_BOOK_CHAPTERS} 章，当前扩展后会达到 ${totalChapters} 章。`,
-      "chapter_limit_exceeded",
-    );
-  }
-
   const targetWords = totalChapters * project.chapterWords;
-  if (targetWords > MAX_TARGET_WORDS) {
-    throw new OutlineExtensionError(
-      `扩展后预计 ${targetWords} 字，超过单本上限 ${MAX_TARGET_WORDS} 字。请减少追加章数或每章字数。`,
-      "word_limit_exceeded",
-    );
-  }
 
   const baseUser = buildOutlineExtensionUserPrompt(
     project,

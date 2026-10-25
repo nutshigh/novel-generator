@@ -463,7 +463,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
           <textarea id="premise" name="premise" required placeholder="例如：旧城即将沉没，一个修钟匠发现自己能听见地脉的回声。"></textarea>
           <div class="prompt-row"><span class="count" id="premise-count">0 字</span></div>
           <div class="options">
-            <label class="opt is-editable" for="maxChapters"><span>章节数</span><input id="maxChapters" type="number" min="1" max="40" step="1" value="6" inputmode="numeric"><em>章</em></label>
+            <label class="opt is-editable" for="maxChapters"><span>章节数</span><input id="maxChapters" type="number" min="1" max="200" step="1" value="6" inputmode="numeric"><em>章</em></label>
             <label class="opt is-editable" for="chapterWords"><span>每章字数</span><input id="chapterWords" type="number" min="200" max="20000" step="100" value="800" inputmode="numeric"><em>字</em></label>
             <div class="opt"><span>全书预计</span><b id="total-words">4,800</b><em>字</em></div>
           </div>
@@ -697,7 +697,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   </div>
   <div class="modal-body">
     <p id="continue-copy"></p>
-    <label class="continue-field" id="continue-batch">本次写作章数<input id="continue-chapters" type="number" min="1" max="200" step="1" value="6" inputmode="numeric"><span id="continue-batch-estimate"></span></label>
+    <label class="continue-field" id="continue-batch">本次写作章数<input id="continue-chapters" type="number" min="1" step="1" value="6" inputmode="numeric"><span id="continue-batch-estimate"></span></label>
     <label class="continue-field" id="continue-extension" hidden>追加大纲章数<input id="continue-count" type="number" min="1" max="20" step="1" value="6" inputmode="numeric"><span id="continue-estimate"></span></label>
     <p class="alert" id="continue-error" role="alert" hidden></p>
   </div>
@@ -2016,7 +2016,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
         var extendButton = make("button", "btn-dark", "续写新章节");
         extendButton.type = "button";
         extendButton.disabled = disabled || !book.canExtend;
-        if (!book.canExtend) extendButton.title = "已达到单本章节上限";
+        if (!book.canExtend) extendButton.title = "当前无法续写";
         extendButton.addEventListener("click", function () {
           openContinue(book, { extension: true });
         });
@@ -3346,7 +3346,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
       return;
     }
 
-    maxChapters = clampNumber(maxChaptersInput, 6, 1, 40);
+    maxChapters = clampNumber(maxChaptersInput, 6, 1, 200);
     var chapterWords = clampNumber(chapterWordsInput, 800, 200, 20000);
     updateTotal();
 
@@ -3413,7 +3413,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   premiseInput.addEventListener("input", updatePremiseCount);
   maxChaptersInput.addEventListener("input", updateTotal);
   chapterWordsInput.addEventListener("input", updateTotal);
-  maxChaptersInput.addEventListener("change", function () { maxChapters = clampNumber(maxChaptersInput, 6, 1, 40); updateTotal(); });
+  maxChaptersInput.addEventListener("change", function () { maxChapters = clampNumber(maxChaptersInput, 6, 1, 200); updateTotal(); });
   chapterWordsInput.addEventListener("change", function () { clampNumber(chapterWordsInput, 800, 200, 20000); updateTotal(); });
 
   updatePremiseCount();

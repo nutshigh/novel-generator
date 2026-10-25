@@ -119,7 +119,7 @@ describe("generateOutline", () => {
       generateOutline(makeProject(), makeBible(6), gateway, {
         maxChapters: MAX_SUPPORTED_CHAPTERS + 1,
       }),
-    ).rejects.toThrow(/MAX_SUPPORTED_CHAPTERS 40/);
+    ).rejects.toThrow(/MAX_SUPPORTED_CHAPTERS 200/);
     expect(gateway.requests).toHaveLength(0);
   });
 
@@ -144,14 +144,14 @@ describe("generateOutline", () => {
     expect(project.targetWords).toBe(4800);
   });
 
-  it("uses the 256k output budget for outline generation", async () => {
+  it("uses the 384k output budget for outline generation", async () => {
     const project = makeProject({ maxChapters: 10, chapterWords: 800 });
     const bible = makeBible(10);
     const gateway = new ScriptedGateway([await validOutlineResponse(10, 800)]);
 
     await generateOutline(project, bible, gateway);
 
-    expect(gateway.requests[0]!.maxTokens).toBe(256000);
+    expect(gateway.requests[0]!.maxTokens).toBe(384000);
   });
 });
 

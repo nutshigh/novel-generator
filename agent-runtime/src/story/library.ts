@@ -1,6 +1,5 @@
 import {
   ChapterSchema,
-  MAX_BOOK_CHAPTERS,
   OutlineSchema,
   type Chapter,
   type Outline,
@@ -335,8 +334,7 @@ async function buildToc(
     wordCount,
     needsAttention,
     firstUnwrittenChapter,
-    canExtend:
-      firstUnwrittenChapter === null && plannedChapters < MAX_BOOK_CHAPTERS,
+    canExtend: firstUnwrittenChapter === null,
     volumes,
   };
 }

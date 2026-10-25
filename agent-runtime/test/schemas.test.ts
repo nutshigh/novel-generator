@@ -188,11 +188,9 @@ describe("ProjectSchema", () => {
 
     const invalid = [
       { ...valid, targetWords: 199 },
-      { ...valid, targetWords: 2_000_001 },
       { ...valid, chapterWords: 199 },
       { ...valid, chapterWords: 20_001 },
       { ...valid, maxChapters: 0 },
-      { ...valid, maxChapters: 201 },
     ];
 
     for (const project of invalid) {
@@ -200,19 +198,19 @@ describe("ProjectSchema", () => {
     }
   });
 
-  it("accepts the targetWords minimum and maxChapters maximum boundaries", () => {
+  it("accepts the targetWords minimum and chapter counts above 200", () => {
     const project = ProjectSchema.parse({
       id: "p-boundary",
       premise: "一个少年在旧城觉醒。",
       targetWords: 200,
       chapterWords: 200,
-      maxChapters: 200,
+      maxChapters: 500,
       status: "draft",
       createdAt: "2026-10-24T00:00:00.000Z",
     });
 
     expect(project.targetWords).toBe(200);
-    expect(project.maxChapters).toBe(200);
+    expect(project.maxChapters).toBe(500);
   });
 });
 

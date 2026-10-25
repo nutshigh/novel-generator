@@ -12,11 +12,7 @@ import { FakeAiGateway } from "./ai/fakeGateway.js";
 import type { AiGateway } from "./ai/gateway.js";
 import type { ModelConfigInput } from "./ai/piGateway.js";
 import { envModelName, hasEnvModelConfig, loadConfig } from "./config.js";
-import {
-  MAX_BOOK_CHAPTERS,
-  MAX_EXTENSION_BATCH,
-  MAX_TARGET_WORDS,
-} from "./domain/schemas.js";
+import { MAX_EXTENSION_BATCH } from "./domain/schemas.js";
 import type { Project, RunProgress } from "./domain/schemas.js";
 import { JsonProjectStore, type ProjectStore } from "./domain/store.js";
 import { createNovelGraph } from "./graph/index.js";
@@ -348,14 +344,8 @@ function parseContinueBody(value: unknown): ParsedContinueBody {
     );
   }
 
-  if (
-    chapterCount !== undefined &&
-    (chapterCount < 1 || chapterCount > MAX_BOOK_CHAPTERS)
-  ) {
-    throw new RequestError(
-      400,
-      `chapterCount must be between 1 and ${MAX_BOOK_CHAPTERS}.`,
-    );
+  if (chapterCount !== undefined && chapterCount < 1) {
+    throw new RequestError(400, "chapterCount must be a positive integer.");
   }
 
   const modelConfig = parseModelConfig(value.modelConfig);
@@ -1003,23 +993,6 @@ async function handleContinueProject(
     }
 
     const total = toc.plannedChapters + parsed.additionalChapters;
-    if (total > MAX_BOOK_CHAPTERS) {
-      sendJson(res, 400, {
-        error: `单本最多 ${MAX_BOOK_CHAPTERS} 章，当前扩展后会达到 ${total} 章。`,
-        code: "chapter_limit_exceeded",
-      });
-      return;
-    }
-
-    const totalWords = total * toc.project.chapterWords;
-    if (totalWords > MAX_TARGET_WORDS) {
-      sendJson(res, 400, {
-        error: `扩展后预计 ${totalWords} 字，超过单本上限 ${MAX_TARGET_WORDS} 字。`,
-        code: "word_limit_exceeded",
-      });
-      return;
-    }
-
     fromChapter = toc.plannedChapters + 1;
     toChapter = parsed.chapterCount === undefined
       ? total

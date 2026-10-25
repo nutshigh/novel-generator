@@ -1,9 +1,7 @@
 import { z } from "zod";
 
-export const MAX_INITIAL_CHAPTERS = 40;
-export const MAX_BOOK_CHAPTERS = 200;
+export const MAX_INITIAL_CHAPTERS = 200;
 export const MAX_EXTENSION_BATCH = 20;
-export const MAX_TARGET_WORDS = 2_000_000;
 
 export const ProjectStatusSchema = z.enum([
   "draft",
@@ -17,9 +15,9 @@ export const ProjectSchema = z.object({
   id: z.string().min(1),
   premise: z.string(),
   language: z.string().default("简体中文"),
-  targetWords: z.number().int().min(200).max(MAX_TARGET_WORDS),
+  targetWords: z.number().int().min(200),
   chapterWords: z.number().int().min(200).max(20_000),
-  maxChapters: z.number().int().min(1).max(MAX_BOOK_CHAPTERS),
+  maxChapters: z.number().int().min(1),
   status: ProjectStatusSchema,
   createdAt: z.string().datetime({ offset: true }),
 });

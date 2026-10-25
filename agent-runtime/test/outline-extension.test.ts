@@ -9,6 +9,7 @@ import {
 } from "../src/story/outlineExtension.js";
 import { runNovelPipeline } from "../src/story/pipeline.js";
 import { createProject } from "../src/story/project.js";
+import { makeBible, makeOutline } from "./story-fixtures.js";
 
 class BadCastGateway extends FakeAiGateway {
   override async generateText(req: GenerateRequest): Promise<string> {
@@ -101,5 +102,24 @@ describe("extendOutline", () => {
         ai: new FakeAiGateway(),
       }),
     ).rejects.toMatchObject({ code: "invalid_extension_count" });
+  });
+
+  it("allows extending past the old 200-chapter cap", async () => {
+    const project = createProject({
+      premise: "一个少年在旧城意外觉醒。",
+      chapterWords: 300,
+      maxChapters: 200,
+    });
+    const extended = await extendOutline({
+      project,
+      bible: makeBible(200),
+      outline: makeOutline(200, 300),
+      chapters: [],
+      additionalChapters: 2,
+      ai: new FakeAiGateway(),
+    });
+
+    expect(extended.project.maxChapters).toBe(202);
+    expect(flattenOutlineChapters(extended.outline)).toHaveLength(202);
   });
 });
