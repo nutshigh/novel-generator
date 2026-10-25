@@ -1,0 +1,151 @@
+{
+  "logline": "?????????????????? 林砚必须在旧城沉没前找到师父留下的答案。",
+  "synopsis": "故事围绕“??????????????????”展开。林砚与苏晚追查旧城大火，顾沉则在暗处推动另一场交易。",
+  "genre": [
+    "东方玄幻",
+    "成长"
+  ],
+  "audience": "中文网络小说读者",
+  "themes": [
+    "成长",
+    "信任",
+    "代价"
+  ],
+  "tone": "冷峻中带热血",
+  "pov": "第三人称限知",
+  "tense": "过去时",
+  "ending": "林砚以半枚地脉印为代价封住古兽，并公开旧城大火的真相。",
+  "world": {
+    "rules": [
+      "灵力来自地脉",
+      "越阶施术必受反噬",
+      "地名与誓言具有约束力"
+    ],
+    "powerSystem": {
+      "levels": [
+        "引气",
+        "凝脉",
+        "开府",
+        "化神"
+      ],
+      "costs": [
+        "消耗寿元",
+        "透支经脉",
+        "留下地脉烙印"
+      ],
+      "limits": [
+        "无法同时操控两种地脉",
+        "情绪失控时术式会反卷"
+      ]
+    },
+    "factions": [
+      "玄烬宗"
+    ],
+    "society": [
+      "旧城行会掌握粮道",
+      "守夜人负责记录异常"
+    ],
+    "taboos": [
+      "不得唤醒地脉深处的古兽"
+    ]
+  },
+  "characters": [
+    {
+      "name": "林砚",
+      "role": "主角",
+      "goal": "查清师父失踪的真相",
+      "motivation": "保护仅存的家人与旧城",
+      "wound": "幼年目睹旧城大火",
+      "arc": "从只想自保到主动承担代价",
+      "voice": "寡言但观察细致",
+      "secrets": [
+        "体内藏有半枚地脉印"
+      ],
+      "relationships": [
+        "苏晚是并肩同伴",
+        "顾沉是必须面对的对手"
+      ]
+    },
+    {
+      "name": "苏晚",
+      "role": "同伴",
+      "goal": "找回被夺走的宗门典籍",
+      "motivation": "替师门洗清污名",
+      "wound": "曾被同门背叛",
+      "arc": "学会重新信任他人",
+      "voice": "冷静、准确、偶尔尖锐",
+      "secrets": [
+        "知道旧城大火的另一版本"
+      ],
+      "relationships": [
+        "与林砚互相试探后结盟"
+      ]
+    },
+    {
+      "name": "顾沉",
+      "role": "对手",
+      "goal": "夺取地脉印",
+      "motivation": "证明自己配得上宗主之位",
+      "wound": "长期被父亲否定",
+      "arc": "从执念走向自我毁灭",
+      "voice": "礼貌而压迫",
+      "secrets": [
+        "修炼了玄烬宗禁术"
+      ],
+      "relationships": [
+        "把林砚视为必须超越的变量"
+      ]
+    }
+  ],
+  "items": [
+    "半枚地脉印"
+  ],
+  "concepts": [
+    "地脉回响"
+  ],
+  "styleGuide": {
+    "pov": "第三人称限知",
+    "tense": "过去时",
+    "sentenceRhythm": "长短句交替，关键处用短句收束",
+    "dialogueRatio": "约百分之三十五",
+    "descriptionDensity": "中等，优先动作与感官",
+    "bannedPhrases": [
+      "不禁",
+      "嘴角微扬"
+    ],
+    "aiFlavorBlacklist": [
+      "仿佛",
+      "似乎",
+      "某种"
+    ],
+    "webNovelPrinciples": [
+      "每章有钩子",
+      "信息密度高",
+      "冲突推动情节"
+    ]
+  },
+  "foreshadowLedger": [
+    {
+      "setupChapter": 1,
+      "payoffChapter": 1,
+      "title": "地脉印的裂纹",
+      "status": "planned"
+    },
+    {
+      "setupChapter": 1,
+      "payoffChapter": 1,
+      "title": "旧城大火的目击者",
+      "status": "planned"
+    },
+    {
+      "setupChapter": 1,
+      "payoffChapter": 1,
+      "title": "顾沉的禁术印记",
+      "status": "planned"
+    }
+  ],
+  "assumptions": [
+    "地脉印共有两半",
+    "旧城位于地脉交汇处"
+  ]
+}

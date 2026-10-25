@@ -1,0 +1,13 @@
+{
+  "$schema": "https://pi.dev/schemas/models.schema.json",
+  "providers": {
+    "novelbuilder": {
+      "baseUrl": "https://api.deepseek.com/v1",
+      "api": "openai-completions",
+      "apiKey": "$NOVELBUILDER_API_KEY",
+      "models": [
+        { "id": "deepseek-chat" }
+      ]
+    }
+  }
+}

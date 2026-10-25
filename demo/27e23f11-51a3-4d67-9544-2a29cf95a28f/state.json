@@ -1,0 +1,62 @@
+{
+  "entities": [
+    {
+      "entityName": "林砚",
+      "state": {
+        "location": "旧城石阶",
+        "goal": "查清师父失踪的真相",
+        "condition": "左臂擦伤"
+      },
+      "updatedAtChapter": 6
+    }
+  ],
+  "relationships": [
+    {
+      "source": "林砚",
+      "target": "苏晚",
+      "kind": "同伴",
+      "description": "暂时结盟，彼此仍有隐瞒"
+    }
+  ],
+  "foreshadows": [
+    {
+      "title": "地脉印的裂纹",
+      "status": "open",
+      "note": "裂纹比昨日更深"
+    },
+    {
+      "title": "旧城大火的目击者",
+      "status": "planned"
+    },
+    {
+      "title": "顾沉的禁术印记",
+      "status": "open"
+    }
+  ],
+  "events": [
+    {
+      "summary": "第1章，林砚与苏晚在旧城石阶发现新的脚印。",
+      "chapterNumber": 1
+    },
+    {
+      "summary": "第2章，林砚与苏晚在旧城石阶发现新的脚印。",
+      "chapterNumber": 2
+    },
+    {
+      "summary": "第3章，林砚与苏晚在旧城石阶发现新的脚印。",
+      "chapterNumber": 3
+    },
+    {
+      "summary": "第4章，林砚与苏晚在旧城石阶发现新的脚印。",
+      "chapterNumber": 4
+    },
+    {
+      "summary": "第5章，林砚与苏晚在旧城石阶发现新的脚印。",
+      "chapterNumber": 5
+    },
+    {
+      "summary": "第6章，林砚与苏晚在旧城石阶发现新的脚印。",
+      "chapterNumber": 6
+    }
+  ]
+}
