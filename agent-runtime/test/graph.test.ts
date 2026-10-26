@@ -209,4 +209,40 @@ describe("novel knowledge graph", () => {
     expect(chapterRequest!.user).toContain("知识图谱·人物关系");
     expect(chapterRequest!.user).toContain("林砚 ↔ 苏晚");
   });
+
+  it("does not leak graph facts from chapters being rewritten", async () => {
+    const store = new MemoryProjectStore();
+    const project = await store.createProject(
+      createProject({
+        premise: "一个少年在旧城意外觉醒。",
+        chapterWords: 300,
+        maxChapters: 3,
+      }),
+    );
+    await runNovelPipeline({
+      project,
+      ai: new ChangingStateGateway(),
+      store,
+    });
+
+    const memory = new MemoryNovelGraph();
+    const recorder = new RecordingGateway();
+    await continueNovel({
+      projectId: project.id,
+      fromChapter: 2,
+      chapterCount: 2,
+      ai: recorder,
+      store,
+      graph: memory,
+    });
+
+    const chapterThreeRequest = recorder.requests.find(
+      (request) =>
+        request.kind === "chapter" &&
+        markerNumber(request.user, "CHAPTER_NUMBER") === 3,
+    );
+    expect(chapterThreeRequest).toBeDefined();
+    expect(chapterThreeRequest!.user).toContain("第1章的信任程度");
+    expect(chapterThreeRequest!.user).not.toContain("第2章的信任程度");
+  });
 });

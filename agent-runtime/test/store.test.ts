@@ -60,6 +60,16 @@ describe("MemoryProjectStore", () => {
     expect(store.getArtifact(project.id, "bible.json")).toBe('{"ok":true}');
   });
 
+  it("appends artifacts in memory", async () => {
+    const store = new MemoryProjectStore();
+    const project = await store.createProject(input);
+
+    await store.appendArtifact(project.id, "review-log.jsonl", "one\n");
+    await store.appendArtifact(project.id, "review-log.jsonl", "two\n");
+
+    expect(store.getArtifact(project.id, "review-log.jsonl")).toBe("one\ntwo\n");
+  });
+
   it("returns undefined for an unknown project", async () => {
     const store = new MemoryProjectStore();
     expect(await store.getProject("missing")).toBeUndefined();
@@ -115,6 +125,25 @@ describe("JsonProjectStore", () => {
 
       expect(path).toBe(join(root, project.id, "bible.json"));
       expect(await readFile(path, "utf8")).toBe('{"title":"旧城火"}');
+    } finally {
+      removeTempDir(root);
+    }
+  });
+
+  it("appends artifacts on disk", async () => {
+    const root = createTempDir("novelbuilder-store-");
+    const store = new JsonProjectStore(root);
+
+    try {
+      const project = await store.createProject(input);
+      const path = await store.appendArtifact(
+        project.id,
+        "review-log.jsonl",
+        "one\n",
+      );
+      await store.appendArtifact(project.id, "review-log.jsonl", "two\n");
+
+      expect(await readFile(path, "utf8")).toBe("one\ntwo\n");
     } finally {
       removeTempDir(root);
     }

@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { Dirent } from "node:fs";
-import { readFile, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import {
+  appendFile,
+  mkdir,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import {
   ProjectSchema,
@@ -14,6 +22,7 @@ export interface CreateProjectInput {
   targetWords: number;
   chapterWords: number;
   maxChapters: number;
+  reviewEnabled?: boolean;
   id?: string;
   status?: ProjectStatus;
   createdAt?: string;
@@ -24,9 +33,12 @@ export interface ProjectStore {
   getProject(id: string): Promise<Project | undefined>;
   saveProject(project: Project): Promise<void>;
   saveArtifact(projectId: string, name: string, content: string): Promise<string>;
+  appendArtifact(projectId: string, name: string, content: string): Promise<string>;
   readArtifact(projectId: string, name: string): Promise<string | undefined>;
   listArtifacts(projectId: string): Promise<string[]>;
   listProjects(): Promise<Project[]>;
+  /** Absolute on-disk project directory, or undefined for in-memory stores. */
+  getProjectDir(id: string): string | undefined;
 }
 
 function buildProject(input: CreateProjectInput): Project {
@@ -37,6 +49,7 @@ function buildProject(input: CreateProjectInput): Project {
     targetWords: input.targetWords,
     chapterWords: input.chapterWords,
     maxChapters: input.maxChapters,
+    reviewEnabled: input.reviewEnabled ?? false,
     status: input.status ?? "draft",
     createdAt: input.createdAt ?? new Date().toISOString(),
   });
@@ -77,6 +90,19 @@ export class MemoryProjectStore implements ProjectStore {
     return `memory://${projectId}/${name}`;
   }
 
+  async appendArtifact(
+    projectId: string,
+    name: string,
+    content: string,
+  ): Promise<string> {
+    validateProjectId(projectId);
+    resolveArtifactPath(join(resolve("."), "__memory_artifacts__"), name);
+
+    const key = `${projectId}/${name}`;
+    this.artifacts.set(key, (this.artifacts.get(key) ?? "") + content);
+    return `memory://${key}`;
+  }
+
   async readArtifact(
     projectId: string,
     name: string,
@@ -104,6 +130,11 @@ export class MemoryProjectStore implements ProjectStore {
 
   getArtifact(projectId: string, name: string): string | undefined {
     return this.artifacts.get(`${projectId}/${name}`);
+  }
+
+  getProjectDir(id: string): string | undefined {
+    validateProjectId(id);
+    return undefined;
   }
 }
 
@@ -227,6 +258,18 @@ export class JsonProjectStore implements ProjectStore {
     return target;
   }
 
+  async appendArtifact(
+    projectId: string,
+    name: string,
+    content: string,
+  ): Promise<string> {
+    const dir = projectDir(this.rootDir, projectId);
+    const target = artifactPath(dir, name);
+    await mkdir(dirname(target), { recursive: true });
+    await appendFile(target, content, "utf8");
+    return target;
+  }
+
   async readArtifact(
     projectId: string,
     name: string,
@@ -254,6 +297,10 @@ export class JsonProjectStore implements ProjectStore {
       if (isMissing(error)) return [];
       throw error;
     }
+  }
+
+  getProjectDir(id: string): string | undefined {
+    return projectDir(this.rootDir, id);
   }
 
   async listProjects(): Promise<Project[]> {

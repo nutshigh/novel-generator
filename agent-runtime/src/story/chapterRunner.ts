@@ -10,6 +10,10 @@ import type {
   StoryBible,
   StoryState,
 } from "../domain/schemas.js";
+import {
+  openForeshadowStore,
+  type ForeshadowStore,
+} from "../domain/foreshadowStore.js";
 import type { ProjectStore } from "../domain/store.js";
 import type { NovelGraphStore } from "../graph/types.js";
 import {
@@ -19,8 +23,19 @@ import {
   reviseChapter,
   writeChapter,
 } from "./chapter.js";
+import { extractChapterMemory } from "./chapterMemory.js";
+import {
+  recentChaptersFor,
+  selectChapterBriefBlocks,
+  selectRollingSummaryBlocks,
+} from "./context.js";
 import { chapterArtifactName } from "./library.js";
 import { flattenChapters } from "./outline.js";
+import {
+  appendReviewLog,
+  type ReviewLogEntry,
+  type ReviewLogStage,
+} from "./reviewLog.js";
 import { applyStateToChapter, extractState, mergeState } from "./state.js";
 
 export class PipelineError extends Error {
@@ -122,7 +137,7 @@ function countSeverity(review: Review, severity: ReviewIssue["severity"]): numbe
  * problems but traded them for new low-weight notes. Compare the severity
  * composition first, then use issue count and target length as tie-breakers.
  */
-function compareRevision(
+export function compareRevision(
   original: Chapter,
   originalReview: Review,
   revised: Chapter,
@@ -226,6 +241,9 @@ export interface RunChapterRangeInput {
   /** Inclusive last chapter to write. Defaults to the end of the outline. */
   endChapterNumber?: number;
   graph?: NovelGraphStore;
+  foreshadows?: ForeshadowStore;
+  /** Overrides project.reviewEnabled when provided. */
+  reviewEnabled?: boolean;
   signal?: AbortSignal;
   emit?: (event: RunProgress) => void;
 }
@@ -247,17 +265,59 @@ export async function runChapterRange(
   const emit = input.emit ?? (() => undefined);
   const chapters = [...input.chapters];
   let state = input.state;
+  const reviewEnabled = input.reviewEnabled ?? project.reviewEnabled;
+  const ownsForeshadows = input.foreshadows === undefined;
+  const foreshadows =
+    input.foreshadows ?? openForeshadowStore(store, project.id);
 
-  for (const outlineChapter of flattenChapters(outline)) {
-    if (outlineChapter.number < startChapterNumber) continue;
-    if (outlineChapter.number > endChapterNumber) continue;
-    throwIfAborted(signal, outlineChapter.number);
+  const logReview = async (entry: ReviewLogEntry): Promise<void> => {
+    try {
+      await appendReviewLog(store, entry);
+    } catch (error) {
+      emit({
+        phase: "review",
+        message: `第 ${entry.chapterNumber} 章审校日志写入失败：${errorMessage(error)}`,
+        chapterNumber: entry.chapterNumber,
+        error: errorMessage(error),
+      });
+    }
+  };
+
+  try {
+    foreshadows.seed(project.id, bible.foreshadowLedger);
+    if (state.foreshadows.length > 0) {
+      foreshadows.importState(project.id, 0, state.foreshadows);
+    }
+    if (chapters.some((chapter) => chapter.number >= startChapterNumber)) {
+      foreshadows.resetFromChapter(project.id, startChapterNumber);
+    }
+
+    for (const outlineChapter of flattenChapters(outline)) {
+      if (outlineChapter.number < startChapterNumber) continue;
+      if (outlineChapter.number > endChapterNumber) continue;
+      throwIfAborted(signal, outlineChapter.number);
 
     try {
-      const previousChapterText = [...chapters]
-        .filter((chapter) => chapter.number < outlineChapter.number)
-        .sort((left, right) => left.number - right.number)
-        .at(-1)?.text;
+      const contextChapters = recentChaptersFor(chapters, outlineChapter.number);
+      const memoryChapters = recentChaptersFor(
+        chapters,
+        outlineChapter.number,
+        4,
+      );
+      const chapterBriefs = selectChapterBriefBlocks(
+        chapters,
+        outlineChapter.number,
+      );
+      const summaries = selectRollingSummaryBlocks(
+        chapters,
+        outline,
+        outlineChapter.number,
+      );
+      const previousChapterText = contextChapters[0]?.text;
+      const foreshadowLedger = foreshadows.listForChapter(
+        project.id,
+        outlineChapter.number,
+      );
 
       let graphContext: string | undefined;
       if (input.graph) {
@@ -293,6 +353,10 @@ export async function runChapterRange(
         chapter: outlineChapter,
         ai,
         previousChapterText,
+        recentChapters: contextChapters,
+        chapterBriefs,
+        summaries,
+        foreshadowLedger,
         state,
         ...(graphContext ? { graphContext } : {}),
         signal,
@@ -312,7 +376,12 @@ export async function runChapterRange(
         block: "阻断",
       };
 
-      const recordReview = (review: Review): void => {
+      const recordReview = async (
+        review: Review,
+        round: number,
+        stage: ReviewLogStage,
+        wordCount: number,
+      ): Promise<void> => {
         emit({
           phase: "review",
           message: `第 ${outlineChapter.number} 章审校${gateLabel[review.gate]}${
@@ -321,103 +390,150 @@ export async function runChapterRange(
           chapterNumber: outlineChapter.number,
           gate: review.gate,
         });
+        await logReview({
+          type: "review",
+          at: new Date().toISOString(),
+          projectId: project.id,
+          chapterNumber: outlineChapter.number,
+          chapterTitle: outlineChapter.title,
+          round,
+          stage,
+          wordCount,
+          review,
+        });
       };
 
-      emit({
-        phase: "review",
-        message: `第 ${outlineChapter.number} 章审校中…`,
-        chapterNumber: outlineChapter.number,
-      });
-
-      let review = await reviewChapter({
-        project,
-        bible,
-        chapter,
-        ai,
-        signal,
-      });
-      recordReview(review);
-
+      let review: Review = {
+        gate: "pass",
+        summary: reviewEnabled ? "" : "导演模式：未启用审核。",
+        issues: [],
+      };
       let revisionRounds = 0;
-      while (
-        review.gate === "revise" &&
-        revisionRounds < MAX_REVISION_ROUNDS
-      ) {
-        emit({
-          phase: "revise",
-          message: `第 ${outlineChapter.number} 章正在按审校意见修订（第 ${
-            revisionRounds + 1
-          } 轮）…`,
-          chapterNumber: outlineChapter.number,
-          gate: review.gate,
-        });
-        const originalChapter = chapter;
-        const originalReview = review;
-        const revisedChapter = await reviseChapter({
-          project,
-          bible,
-          chapter: originalChapter,
-          review: originalReview,
-          ai,
-          signal,
-        });
+
+      if (reviewEnabled) {
         emit({
           phase: "review",
-          message: `第 ${outlineChapter.number} 章修订完成，重新审校中…`,
+          message: `第 ${outlineChapter.number} 章审校中…`,
           chapterNumber: outlineChapter.number,
         });
-        const revisedReview = await reviewChapter({
+
+        review = await reviewChapter({
           project,
           bible,
-          chapter: revisedChapter,
-          previousReview: originalReview,
+          chapter,
           ai,
           signal,
         });
-        recordReview(revisedReview);
+        await recordReview(review, 0, "initial", chapter.wordCount);
 
-        const decision = compareRevision(
-          originalChapter,
-          originalReview,
-          revisedChapter,
-          revisedReview,
-        );
-        if (!decision.accept) {
+        while (
+          review.gate === "revise" &&
+          revisionRounds < MAX_REVISION_ROUNDS
+        ) {
           emit({
             phase: "revise",
-            message: `第 ${outlineChapter.number} 章修订未改善，保留原稿（${decision.reason}）。`,
+            message: `第 ${outlineChapter.number} 章正在按审校意见修订（第 ${
+              revisionRounds + 1
+            } 轮）…`,
             chapterNumber: outlineChapter.number,
-            gate: revisedReview.gate,
+            gate: review.gate,
           });
-          break;
+          const originalChapter = chapter;
+          const originalReview = review;
+          const revisedChapter = await reviseChapter({
+            project,
+            bible,
+            chapter: originalChapter,
+            review: originalReview,
+            ai,
+            signal,
+          });
+          emit({
+            phase: "review",
+            message: `第 ${outlineChapter.number} 章修订完成，重新审校中…`,
+            chapterNumber: outlineChapter.number,
+          });
+          const revisedReview = await reviewChapter({
+            project,
+            bible,
+            chapter: revisedChapter,
+            previousReview: originalReview,
+            ai,
+            signal,
+          });
+          const revisionRound = revisionRounds + 1;
+          await recordReview(
+            revisedReview,
+            revisionRound,
+            "rereview",
+            revisedChapter.wordCount,
+          );
+
+          const decision = compareRevision(
+            originalChapter,
+            originalReview,
+            revisedChapter,
+            revisedReview,
+          );
+          await logReview({
+            type: "revision_decision",
+            at: new Date().toISOString(),
+            projectId: project.id,
+            chapterNumber: outlineChapter.number,
+            chapterTitle: outlineChapter.title,
+            round: revisionRound,
+            accepted: decision.accept,
+            reason: decision.reason,
+            originalWordCount: originalChapter.wordCount,
+            revisedWordCount: revisedChapter.wordCount,
+          });
+          if (!decision.accept) {
+            emit({
+              phase: "revise",
+              message: `第 ${outlineChapter.number} 章修订未改善，保留原稿（${decision.reason}）。`,
+              chapterNumber: outlineChapter.number,
+              gate: revisedReview.gate,
+            });
+            break;
+          }
+
+          chapter = revisedChapter;
+          review = revisedReview;
+          revisionRounds += 1;
+          emit({
+            phase: "revise",
+            message: `第 ${outlineChapter.number} 章修订已采纳（${chapter.wordCount} 字，${decision.reason}）。`,
+            chapterNumber: outlineChapter.number,
+            wordCount: chapter.wordCount,
+          });
+        }
+      }
+
+      if (reviewEnabled) {
+        let endingAudit: EndingAudit | undefined;
+        try {
+          endingAudit = await auditChapterEnding({ chapter, ai, signal });
+          await logReview({
+            type: "ending_audit",
+            at: new Date().toISOString(),
+            projectId: project.id,
+            chapterNumber: outlineChapter.number,
+            chapterTitle: outlineChapter.title,
+            round: revisionRounds,
+            audit: endingAudit,
+          });
+        } catch (error) {
+          emit({
+            phase: "review",
+            message: `第 ${outlineChapter.number} 章结尾审计失败，跳过：${errorMessage(
+              error,
+            )}`,
+            chapterNumber: outlineChapter.number,
+            error: errorMessage(error),
+          });
         }
 
-        chapter = revisedChapter;
-        review = revisedReview;
-        revisionRounds += 1;
-        emit({
-          phase: "revise",
-          message: `第 ${outlineChapter.number} 章修订已采纳（${chapter.wordCount} 字，${decision.reason}）。`,
-          chapterNumber: outlineChapter.number,
-          wordCount: chapter.wordCount,
-        });
-      }
-
-      let endingAudit: EndingAudit | undefined;
-      try {
-        endingAudit = await auditChapterEnding({ chapter, ai, signal });
-      } catch (error) {
-        emit({
-          phase: "review",
-          message: `第 ${outlineChapter.number} 章结尾审计失败，跳过：${errorMessage(
-            error,
-          )}`,
-          chapterNumber: outlineChapter.number,
-          error: errorMessage(error),
-        });
-      }
-
-      if (endingAudit && !endingAudit.complete) {
+        if (endingAudit && !endingAudit.complete) {
         const audit = endingAudit;
         emit({
           phase: "revise",
@@ -437,6 +553,10 @@ export async function runChapterRange(
             ...(previousChapterText === undefined
               ? {}
               : { previousChapterText }),
+            recentChapters: contextChapters,
+            chapterBriefs,
+            summaries,
+            foreshadowLedger,
             state,
             ...(graphContext === undefined ? {} : { graphContext }),
             reason: audit.reason,
@@ -472,7 +592,12 @@ export async function runChapterRange(
               ai,
               signal,
             });
-            recordReview(review);
+            await recordReview(
+              review,
+              revisionRounds + 1,
+              "ending_repair",
+              chapter.wordCount,
+            );
           } catch (error) {
             emit({
               phase: "review",
@@ -489,6 +614,15 @@ export async function runChapterRange(
               chapter,
               ai,
               signal,
+            });
+            await logReview({
+              type: "ending_audit",
+              at: new Date().toISOString(),
+              projectId: project.id,
+              chapterNumber: outlineChapter.number,
+              chapterTitle: outlineChapter.title,
+              round: revisionRounds + 1,
+              audit: recheck,
             });
             if (!recheck.complete) {
               review = withEndingIssue(review, recheck, chapter);
@@ -511,12 +645,46 @@ export async function runChapterRange(
           }
         }
       }
+      }
 
       chapter = {
         ...chapter,
         review,
         status: completedStatus(chapter, review),
       };
+
+      try {
+        const memory = await extractChapterMemory({
+          chapter,
+          previousChapters: memoryChapters,
+          foreshadows: foreshadows.listForChapter(
+            project.id,
+            outlineChapter.number,
+          ),
+          ai,
+          signal,
+        });
+        chapter = {
+          ...chapter,
+          digest: memory.digest,
+          brief: memory.brief,
+          summary: memory.summary,
+        };
+        foreshadows.applyDigest(
+          project.id,
+          outlineChapter.number,
+          memory.digest.foreshadows,
+        );
+      } catch (error) {
+        emit({
+          phase: "state",
+          message: `第 ${outlineChapter.number} 章档案提取失败，继续保存正文：${errorMessage(
+            error,
+          )}`,
+          chapterNumber: outlineChapter.number,
+          error: errorMessage(error),
+        });
+      }
 
       emit({
         phase: "state",
@@ -542,6 +710,10 @@ export async function runChapterRange(
           },
         });
         const merged = mergeState(state, extracted);
+        merged.foreshadows = foreshadows.toStoryState(
+          project.id,
+          outlineChapter.number,
+        );
         chapter = applyStateToChapter(chapter, merged);
         state = merged;
         emit({
@@ -615,6 +787,19 @@ export async function runChapterRange(
         { cause: error },
       );
     }
+    }
+
+    for (const chapter of chapters) {
+      if (chapter.number <= endChapterNumber) continue;
+      if (!chapter.digest) continue;
+      foreshadows.applyDigest(
+        project.id,
+        chapter.number,
+        chapter.digest.foreshadows,
+      );
+    }
+  } finally {
+    if (ownsForeshadows) foreshadows.close();
   }
 
   return { chapters, state };

@@ -52,7 +52,7 @@ textarea::placeholder { color: #6f746e; }
 textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(31,91,78,.08); }
 .prompt-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 .prompt-row .count { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
-.options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 22px; }
+.options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
 .composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 26px; border-top: 1px solid var(--line); background: var(--surface-2); }
 .save-hint { display: flex; align-items: center; gap: 7px; max-width: min(420px, 100%); min-width: 0; flex: 0 1 auto; font-size: 11.5px; color: var(--muted); }
 .save-hint > span[aria-hidden] { color: var(--accent); font-size: 12px; line-height: 1; }
@@ -187,6 +187,7 @@ fieldset.field { border: 0; padding: 0; margin: 0 0 17px; min-width: 0; }
   border-bottom-color: var(--accent);
   box-shadow: none;
 }
+.opt input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
 .opt b { min-width: 76px; font-family: var(--mono); font-size: 19px; font-weight: 600; letter-spacing: -.03em; }
 .opt em { font-style: normal; font-size: 11px; color: var(--muted); }
 .save-hint { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
@@ -314,6 +315,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .tree-stage { margin-left: 4px; border-left: 1px solid var(--line); padding-left: 12px; }
 .tree-stage .tree-toggle .tree-title { font-weight: 600; font-size: 12px; color: var(--ink-2); }
 .chapter-list { list-style: none; margin: 0 0 6px; padding: 0 0 0 25px; }
+.chapter-item:last-child .chapter-row { border-bottom: 0; }
 .chapter-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #eeeee8; }
 .chapter-row:last-child { border-bottom: 0; }
 .chapter-no { font-family: var(--mono); font-size: 10px; color: var(--muted); min-width: 44px; }
@@ -326,6 +328,14 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .chapter-stat[data-state="missing"] { color: var(--muted); }
 .chapter-actions { display: flex; gap: 5px; }
 .chapter-actions .link-btn { font-size: 10px; padding: 2px 3px; }
+.chapter-outline { margin: 2px 0 10px 54px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; background: var(--surface); }
+.chapter-outline-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: 11px; color: var(--muted); }
+.chapter-outline-head b { color: var(--ink); font-size: 12px; }
+.outline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin: 0; }
+.outline-field { min-width: 0; }
+.outline-field.is-wide { grid-column: 1 / -1; }
+.outline-field dt { margin: 0; font-size: 9.5px; font-weight: 700; letter-spacing: .07em; color: var(--muted); }
+.outline-field dd { margin: 2px 0 0; font-size: 11.5px; line-height: 1.7; color: var(--ink-2); overflow-wrap: anywhere; }
 .toc-loading { padding: 10px 0; font-size: 11px; color: var(--muted); }
 
 .modal { position: fixed; z-index: 31; top: 50%; left: 50%; width: min(480px, calc(100vw - 40px)); transform: translate(-50%, -48%); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 30px 80px -30px rgba(15,24,20,.5); overflow: hidden; }
@@ -345,6 +355,85 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .reader-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--serif); font-size: 16px; line-height: 2; color: var(--ink-2); }
 .reader-nav { display: flex; align-items: center; gap: 10px; }
 .reader-position { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.prompt-drawer { width: min(1180px, 100%); }
+.prompt-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 26px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.prompt-toolbar-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; min-width: 0; }
+.prompt-toolbar label { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: var(--ink-2); }
+.prompt-toolbar select { height: 32px; max-width: 320px; padding: 0 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 11.5px; }
+.prompt-tabs { display: flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #f1f2ed; }
+.prompt-tab { border: 0; border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: 11px; font-weight: 650; padding: 5px 12px; cursor: pointer; }
+.prompt-tab:hover { color: var(--ink); }
+.prompt-tab.is-active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(20,24,20,.08); }
+.obs-overview { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+.obs-stat { border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); padding: 10px 12px; min-width: 0; }
+.obs-stat span { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.obs-stat b { display: block; margin-top: 3px; font-family: var(--mono); font-size: 15px; font-weight: 650; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obs-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 12px; overflow: hidden; }
+.obs-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); flex-wrap: wrap; }
+.obs-card-title { font-size: 12px; font-weight: 700; color: var(--ink); }
+.obs-card-meta { font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+.obs-card-body { padding: 13px 14px; }
+.obs-summary-text { margin: 0; font-family: var(--serif); font-size: 14.5px; line-height: 1.95; color: var(--ink-2); }
+.obs-note { margin: 0; font-size: 11.5px; line-height: 1.75; color: var(--muted); }
+.obs-note.is-warn { color: #8a5c12; }
+.obs-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.obs-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); background: var(--surface); font-size: 9.5px; font-weight: 650; color: var(--ink-2); white-space: nowrap; }
+.obs-chip.is-director { border-color: rgba(31,91,78,.22); background: var(--accent-soft); color: var(--accent); }
+.obs-chip.is-model { background: #f1f2ed; color: var(--muted); }
+.obs-chip.is-open { border-color: #ecd9ad; background: #fdf6e7; color: #8a5c12; }
+.obs-chip.is-done { border-color: #cfe0d9; background: var(--accent-soft); color: var(--accent); }
+.obs-chip.is-warn { border-color: #f0c9b9; background: var(--warm-soft); color: var(--warm-ink); }
+.obs-chip.is-error { border-color: #e9b9aa; background: #fbebe6; color: #8f341c; }
+.obs-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px 18px; margin: 0; }
+.obs-field { min-width: 0; }
+.obs-field.is-wide { grid-column: 1 / -1; }
+.obs-field dt { margin: 0; font-size: 9.5px; font-weight: 700; letter-spacing: .07em; color: var(--muted); }
+.obs-field dd { margin: 2px 0 0; font-size: 12px; line-height: 1.75; color: var(--ink-2); overflow-wrap: anywhere; }
+.obs-list { margin: 0; padding: 0; list-style: none; }
+.obs-list-item { padding: 9px 0; border-top: 1px dashed var(--line); }
+.obs-list-item:first-child { padding-top: 0; border-top: 0; }
+.obs-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.obs-list-title { font-size: 12px; font-weight: 650; color: var(--ink); overflow-wrap: anywhere; }
+.obs-list-meta { font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+.obs-list-body { margin: 4px 0 0; font-size: 11.5px; line-height: 1.75; color: var(--ink-2); overflow-wrap: anywhere; }
+.obs-subhead { margin: 0 0 8px; font-size: 9.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.obs-section { border-top: 1px solid var(--line); }
+.obs-section summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; background: var(--surface-2); color: var(--ink-2); font-size: 11px; font-weight: 650; cursor: pointer; }
+.obs-section[open] summary { border-bottom: 1px dashed var(--line); }
+.obs-section-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obs-section-size { flex: none; font-family: var(--mono); font-size: 9px; font-weight: 500; color: var(--muted); }
+.obs-section-body { max-height: 420px; overflow: auto; padding: 11px 12px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11.5px; line-height: 1.85; color: var(--ink-2); }
+.obs-reply { border-top: 1px solid var(--line); }
+.obs-reply-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+.obs-tool { margin: 9px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); overflow: hidden; }
+.obs-tool-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 10px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.obs-tool-name { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 11.5px; font-weight: 650; color: var(--ink); }
+.obs-tool-name code { font-family: var(--mono); font-size: 9.5px; font-weight: 500; color: var(--muted); }
+.obs-tool-state { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+.obs-tool-body { padding: 9px 10px; }
+.obs-tool-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 7px 14px; margin: 0; }
+.obs-tool-field dt { margin: 0; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.obs-tool-field dd { margin: 1px 0 0; font-size: 11.5px; line-height: 1.65; color: var(--ink-2); overflow-wrap: anywhere; }
+.obs-tool-text { margin: 8px 0 0; max-height: 340px; overflow: auto; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--serif); font-size: 12.5px; line-height: 1.8; color: var(--ink-2); }
+.obs-tool-empty { margin: 0; font-size: 11px; color: var(--muted); }
+.obs-json { font-size: 11px; line-height: 1.7; color: var(--ink-2); }
+.obs-json-row { display: grid; grid-template-columns: minmax(80px, auto) minmax(0,1fr); gap: 10px; padding: 2px 0; align-items: start; }
+.obs-json-key { font-family: var(--mono); font-size: 10px; color: var(--accent); overflow-wrap: anywhere; }
+.obs-json-value { min-width: 0; overflow-wrap: anywhere; }
+.obs-json-branch { margin: 3px 0 3px 4px; padding-left: 9px; border-left: 2px solid var(--line); }
+.obs-json-branch summary { font-size: 10px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.obs-json-primitive { font-size: 11.5px; color: var(--ink-2); }
+.obs-json-primitive.is-string { white-space: pre-wrap; }
+.obs-json-empty { font-size: 10.5px; color: var(--muted); }
+.obs-empty { margin: 0; padding: 20px 0; text-align: center; color: var(--muted); font-size: 12px; }
+.obs-error { margin: 8px 12px 12px; padding: 8px 10px; border: 1px solid #e9b9aa; border-radius: 8px; background: var(--warm-soft); color: #8f341c; font-size: 11.5px; line-height: 1.7; overflow-wrap: anywhere; }
+.obs-timeline-note { margin: 0 0 12px; font-size: 11.5px; line-height: 1.7; color: var(--muted); }
+.prompt-list { display: flex; flex-direction: column; gap: 12px; }
+.prompt-entry { border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); overflow: hidden; }
+.prompt-entry-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--surface); font-size: 11px; }
+.prompt-entry-head b { font-size: 12px; color: var(--ink); }
+.prompt-meta { font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+.prompt-empty { margin: 0; padding: 24px 0; text-align: center; color: var(--muted); font-size: 12px; }
 /* ---------- knowledge graph page ---------- */
 .graph-layout { display: grid; grid-template-columns: 260px minmax(0,1fr) 300px; gap: 14px; align-items: stretch; }
 .graph-side, .graph-detail { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
@@ -418,6 +507,15 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   .book-actions { width: 100%; }
   .chapter-row { flex-wrap: wrap; }
   .chapter-name { flex-basis: 100%; order: 3; }
+  .chapter-outline { margin-left: 0; }
+  .outline-grid { grid-template-columns: 1fr; }
+  .prompt-toolbar { padding: 10px 18px; }
+  .prompt-toolbar select { max-width: 100%; }
+  .prompt-toolbar-left { width: 100%; }
+  .prompt-tabs { width: 100%; justify-content: center; }
+  .obs-overview { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .obs-grid { grid-template-columns: 1fr; }
+  .obs-json-row { grid-template-columns: 1fr; gap: 1px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .overlay, .drawer, .ring, .btn-primary { transition: none; animation: none; }
@@ -465,6 +563,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
           <div class="options">
             <label class="opt is-editable" for="maxChapters"><span>章节数</span><input id="maxChapters" type="number" min="1" max="200" step="1" value="6" inputmode="numeric"><em>章</em></label>
             <label class="opt is-editable" for="chapterWords"><span>每章字数</span><input id="chapterWords" type="number" min="200" max="20000" step="100" value="800" inputmode="numeric"><em>字</em></label>
+            <label class="opt is-editable" for="reviewEnabled"><span>审核/修订</span><input id="reviewEnabled" type="checkbox"><em>可选</em></label>
             <div class="opt"><span>全书预计</span><b id="total-words">4,800</b><em>字</em></div>
           </div>
         </div>
@@ -720,6 +819,26 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   </div>
 </aside>
 
+<div class="overlay" id="prompt-overlay" hidden></div>
+<aside class="drawer prompt-drawer" id="prompt-drawer" role="dialog" aria-modal="true" aria-labelledby="prompt-log-title" hidden>
+  <div class="drawer-head">
+    <div><div class="drawer-kicker">WRITING OBSERVATORY</div><h2 id="prompt-log-title">写作观测面板</h2><p id="prompt-log-meta"></p></div>
+    <button class="close-btn" id="prompt-log-close" type="button" aria-label="关闭写作观测面板">×</button>
+  </div>
+  <div class="prompt-toolbar">
+    <div class="prompt-toolbar-left">
+      <label for="prompt-log-chapter">章节<select id="prompt-log-chapter"></select></label>
+      <div class="prompt-tabs" id="prompt-log-tabs" role="tablist" aria-label="观测内容">
+        <button class="prompt-tab is-active" type="button" data-prompt-view="rounds" role="tab" aria-selected="true">对话轮次</button>
+        <button class="prompt-tab" type="button" data-prompt-view="memory" role="tab" aria-selected="false">摘要与档案</button>
+        <button class="prompt-tab" type="button" data-prompt-view="foreshadow" role="tab" aria-selected="false">伏笔账本</button>
+      </div>
+    </div>
+    <span class="prompt-meta" id="prompt-log-count"></span>
+  </div>
+  <div class="drawer-body" id="prompt-log-body"><p class="prompt-empty">正在读取观测数据…</p></div>
+</aside>
+
 <script src="/vendor/cytoscape.min.js"></script>
 <script>
 (function () {
@@ -732,6 +851,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   var premiseCount = $("premise-count");
   var maxChaptersInput = $("maxChapters");
   var chapterWordsInput = $("chapterWords");
+  var reviewEnabledInput = $("reviewEnabled");
   var totalWords = $("total-words");
   var submitButton = $("submit-button");
   var abortButton = $("abort-button");
@@ -828,6 +948,16 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   var readerPrev = $("reader-prev");
   var readerNext = $("reader-next");
   var readerPosition = $("reader-position");
+
+  var promptOverlay = $("prompt-overlay");
+  var promptDrawer = $("prompt-drawer");
+  var promptLogClose = $("prompt-log-close");
+  var promptLogTitle = $("prompt-log-title");
+  var promptLogMeta = $("prompt-log-meta");
+  var promptLogChapter = $("prompt-log-chapter");
+  var promptLogTabs = $("prompt-log-tabs");
+  var promptLogCount = $("prompt-log-count");
+  var promptLogBody = $("prompt-log-body");
 
   var graphView = $("graph-view");
   var viewTabGraph = $("view-tab-graph");
@@ -927,6 +1057,8 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   var librarySeenEvents = Object.create(null);
   var continueState = null;
   var readerState = null;
+  var promptState = null;
+  var promptRequestId = 0;
 
   function api(path, options) {
     return fetch(path, options).then(function (response) {
@@ -1388,6 +1520,11 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
       if (readerState) {
         event.preventDefault();
         closeReader();
+        return;
+      }
+      if (promptState) {
+        event.preventDefault();
+        closePromptLog();
         return;
       }
       if (settingsOpen) {
@@ -2047,6 +2184,11 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
     historyButton.addEventListener("click", function () { showLatestRun(book); });
     actions.appendChild(historyButton);
 
+    var promptLogButton = make("button", "btn-ghost", "观测面板");
+    promptLogButton.type = "button";
+    promptLogButton.addEventListener("click", function () { openPromptLog(book, null); });
+    actions.appendChild(promptLogButton);
+
     if (book.outlineReady) {
       var graphButton = make("button", "btn-ghost", "图谱");
       graphButton.type = "button";
@@ -2167,7 +2309,8 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   }
 
   function renderChapterRow(book, toc, chapter) {
-    var row = make("li", "chapter-row");
+    var item = make("li", "chapter-item");
+    var row = make("div", "chapter-row");
     row.appendChild(make("span", "chapter-no", "第" + chapter.number + "章"));
 
     var name = make("button", "chapter-name", chapter.title);
@@ -2193,6 +2336,26 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
       read.addEventListener("click", function () { openReader(book, chapter.number); });
       actions.appendChild(read);
     }
+
+    var outlinePanel = null;
+    var outlineButton = make("button", "link-btn", "章纲");
+    outlineButton.type = "button";
+    outlineButton.addEventListener("click", function () {
+      if (!outlinePanel) {
+        outlinePanel = renderChapterOutline(chapter);
+        outlinePanel.hidden = true;
+        item.appendChild(outlinePanel);
+      }
+      outlinePanel.hidden = !outlinePanel.hidden;
+      outlineButton.textContent = outlinePanel.hidden ? "章纲" : "收起章纲";
+    });
+    actions.appendChild(outlineButton);
+
+    var logButton = make("button", "link-btn", "观测");
+    logButton.type = "button";
+    logButton.addEventListener("click", function () { openPromptLog(book, chapter.number); });
+    actions.appendChild(logButton);
+
     var write = make("button", "link-btn", "从此章续写");
     write.type = "button";
     write.disabled = actionDisabled();
@@ -2202,7 +2365,36 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
     actions.appendChild(write);
     row.appendChild(actions);
 
-    return row;
+    item.appendChild(row);
+    return item;
+  }
+
+  function renderChapterOutline(chapter) {
+    var panel = make("div", "chapter-outline");
+    var head = make("div", "chapter-outline-head");
+    head.appendChild(make("b", "", "第 " + chapter.number + " 章章纲"));
+    head.appendChild(make("span", "", "目标 " + (chapter.targetWords || 0).toLocaleString("zh-CN") + " 字"));
+    panel.appendChild(head);
+
+    var grid = make("dl", "outline-grid");
+    appendOutlineField(grid, "视角", chapter.pov, false);
+    appendOutlineField(grid, "出场人物", (chapter.cast || []).join("、"), false);
+    appendOutlineField(grid, "本章目标", chapter.goal, true);
+    appendOutlineField(grid, "冲突", chapter.conflict, true);
+    appendOutlineField(grid, "转折", chapter.turn, true);
+    appendOutlineField(grid, "揭示", chapter.reveal, true);
+    appendOutlineField(grid, "结尾钩子", chapter.hook, true);
+    appendOutlineField(grid, "本章摘要", chapter.summary, true);
+    panel.appendChild(grid);
+    return panel;
+  }
+
+  function appendOutlineField(grid, label, value, wide) {
+    var field = make("div", "outline-field" + (wide ? " is-wide" : ""));
+    field.appendChild(make("dt", "", label));
+    var text = value === undefined || value === null ? "" : String(value).trim();
+    field.appendChild(make("dd", "", text.length > 0 ? text : "—"));
+    grid.appendChild(field);
   }
 
   function writeCountLimit(state) {
@@ -2671,6 +2863,1489 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
     setTimeout(function () {
       readerOverlay.hidden = true;
       readerDrawer.hidden = true;
+    }, 180);
+  }
+
+  var PROMPT_TOOL_LABELS = {
+    run_status: "写作进度",
+    story_digest: "章节档案",
+    story_recall: "分层回忆",
+    chapter_read: "读取章节",
+    story_graph: "知识图谱",
+    foreshadow_update: "更新伏笔",
+    chapter_commit: "提交章节"
+  };
+  var PROMPT_FORESHADOW_LABELS = {
+    planned: "计划中",
+    open: "未回收",
+    progressed: "推进中",
+    resolved: "已回收",
+    abandoned: "已放弃"
+  };
+  var PROMPT_ACTION_LABELS = {
+    setup: "埋设",
+    progress: "推进",
+    payoff: "回收",
+    abandon: "放弃",
+    mention: "提及",
+    update: "更新"
+  };
+  var PROMPT_FIELD_LABELS = {
+    title: "标题",
+    name: "名称",
+    status: "状态",
+    note: "备注",
+    detail: "说明",
+    type: "类型",
+    kind: "类型",
+    chapterNumber: "章节",
+    wordCount: "字数",
+    targetWords: "目标字数",
+    missingWords: "缺少字数",
+    message: "提示",
+    setupChapter: "设置章",
+    plannedPayoffChapter: "计划回收章",
+    resolvedChapter: "回收章",
+    updatedAtChapter: "更新章",
+    action: "动作",
+    fromChapter: "起始章",
+    toChapter: "结束章",
+    summary: "摘要",
+    impact: "影响",
+    goal: "目标",
+    change: "变化",
+    reason: "原因",
+    source: "起点",
+    target: "终点",
+    roleInChapter: "本章角色",
+    gate: "结论",
+    issues: "问题",
+    severity: "严重度",
+    quote: "原文",
+    problem: "问题",
+    fix: "建议",
+    entities: "实体",
+    relationships: "关系",
+    foreshadows: "伏笔",
+    events: "事件",
+    entityName: "实体",
+    state: "状态",
+    description: "描述",
+    complete: "完整",
+    missing: "缺失",
+    nodes: "节点",
+    edges: "关系",
+    available: "可用",
+    chapterFrom: "起始章",
+    chapterTo: "结束章",
+    nodeCount: "节点数",
+    edgeCount: "关系数",
+    coreSettings: "核心设定",
+    characters: "人物",
+    plotNodes: "情节节点",
+    relationshipProgress: "关系进展",
+    toolName: "工具",
+    isError: "失败",
+    text: "文本",
+    model: "模型",
+    stopReason: "停止原因",
+    usage: "用量"
+  };
+
+  function promptKindLabel(kind) {
+    var labels = {
+      bible: "故事圣经",
+      outline: "章节大纲",
+      outline_extension: "大纲扩展",
+      chapter: "章节写作",
+      review: "审校",
+      ending_audit: "结尾审计",
+      boundary_audit: "接缝审计",
+      seam_repair: "接缝修复",
+      state: "状态提取",
+      chapter_memory: "章节记忆",
+      revise: "修订"
+    };
+    return labels[kind] || kind || "模型调用";
+  }
+
+  function promptToolLabel(name) {
+    return PROMPT_TOOL_LABELS[name] || name || "工具";
+  }
+
+  function promptForeshadowLabel(status) {
+    return PROMPT_FORESHADOW_LABELS[status] || status || "未知";
+  }
+
+  function promptForeshadowTone(status) {
+    if (status === "resolved" || status === "abandoned") return "is-done";
+    if (status === "planned" || status === "open" || status === "progressed") {
+      return "is-open";
+    }
+    return "";
+  }
+
+  function promptActionLabel(action) {
+    return PROMPT_ACTION_LABELS[action] || action || "动作";
+  }
+
+  function promptFieldLabel(key) {
+    return PROMPT_FIELD_LABELS[key] || key;
+  }
+
+  function promptIsObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function promptParseJson(value) {
+    if (typeof value !== "string") return undefined;
+    var text = value.trim();
+    if (text.length === 0 || (text.charAt(0) !== "{" && text.charAt(0) !== "[")) {
+      return undefined;
+    }
+    try { return JSON.parse(text); } catch (ignore) { return undefined; }
+  }
+
+  function promptPrimitive(value) {
+    var node = make("span", "obs-json-primitive");
+    if (value === null || value === undefined) {
+      node.textContent = "—";
+      return node;
+    }
+    if (typeof value === "boolean") {
+      node.textContent = value ? "是" : "否";
+      return node;
+    }
+    if (typeof value === "string") node.className += " is-string";
+    node.textContent = String(value);
+    return node;
+  }
+
+  function promptSnippet(value, limit) {
+    var text = String(value === undefined || value === null ? "" : value)
+      .replace(/\\s+/g, " ")
+      .trim();
+    return text.length > limit ? text.slice(0, limit) + "…" : text;
+  }
+
+  function renderJsonTree(value, depth) {
+    var level = typeof depth === "number" ? depth : 0;
+    var box = make("div", "obs-json");
+    if (value === null || typeof value !== "object") {
+      box.appendChild(promptPrimitive(value));
+      return box;
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        box.appendChild(make("span", "obs-json-empty", "（空）"));
+        return box;
+      }
+      for (var index = 0; index < value.length; index += 1) {
+        var item = value[index];
+        if (promptIsObject(item)) {
+          var itemLabel =
+            item.title || item.name || item.summary || item.entityName ||
+            item.toolName || item.id;
+          var details = document.createElement("details");
+          details.className = "obs-json-branch";
+          if (level < 2) details.open = true;
+          details.appendChild(make(
+            "summary",
+            "",
+            "第 " + (index + 1) + " 项" +
+              (itemLabel ? " · " + promptSnippet(itemLabel, 34) : "")
+          ));
+          details.appendChild(renderJsonTree(item, level + 1));
+          box.appendChild(details);
+        } else {
+          var row = make("div", "obs-json-row");
+          row.appendChild(make("span", "obs-json-key", "#" + (index + 1)));
+          var cell = make("div", "obs-json-value");
+          cell.appendChild(promptPrimitive(item));
+          row.appendChild(cell);
+          box.appendChild(row);
+        }
+      }
+      return box;
+    }
+
+    var keys = Object.keys(value);
+    if (keys.length === 0) {
+      box.appendChild(make("span", "obs-json-empty", "（空）"));
+      return box;
+    }
+
+    for (var keyIndex = 0; keyIndex < keys.length; keyIndex += 1) {
+      var key = keys[keyIndex];
+      var child = value[key];
+      var keyRow = make("div", "obs-json-row");
+      keyRow.appendChild(make("span", "obs-json-key", promptFieldLabel(key)));
+      var valueCell = make("div", "obs-json-value");
+      if (child !== null && typeof child === "object") {
+        var branch = document.createElement("details");
+        branch.className = "obs-json-branch";
+        if (level < 1) branch.open = true;
+        var size = Array.isArray(child) ? child.length + " 项" : Object.keys(child).length + " 个字段";
+        branch.appendChild(make("summary", "", "展开 · " + size));
+        branch.appendChild(renderJsonTree(child, level + 1));
+        valueCell.appendChild(branch);
+      } else {
+        valueCell.appendChild(promptPrimitive(child));
+      }
+      keyRow.appendChild(valueCell);
+      box.appendChild(keyRow);
+    }
+    return box;
+  }
+
+  function renderObsStats(items) {
+    var box = make("div", "obs-overview");
+    for (var index = 0; index < items.length; index += 1) {
+      var cell = make("div", "obs-stat");
+      cell.appendChild(make("span", "", items[index][0]));
+      cell.appendChild(make("b", "", items[index][1]));
+      box.appendChild(cell);
+    }
+    return box;
+  }
+
+  function renderObsCard(title, meta, bodyNodes) {
+    var card = make("section", "obs-card");
+    var head = make("div", "obs-card-head");
+    head.appendChild(make("span", "obs-card-title", title));
+    if (meta) head.appendChild(make("span", "obs-card-meta", meta));
+    card.appendChild(head);
+    var body = make("div", "obs-card-body");
+    for (var index = 0; index < bodyNodes.length; index += 1) {
+      var node = bodyNodes[index];
+      if (node === undefined || node === null) continue;
+      if (typeof node === "string") body.appendChild(make("p", "obs-note", node));
+      else body.appendChild(node);
+    }
+    card.appendChild(body);
+    return card;
+  }
+
+  function renderObsFields(fields) {
+    var list = make("dl", "obs-grid");
+    for (var index = 0; index < fields.length; index += 1) {
+      var pair = fields[index];
+      var value = pair[1];
+      if (value === undefined || value === null || value === "") continue;
+      var wrap = make("div", "obs-field" + (pair[2] ? " is-wide" : ""));
+      wrap.appendChild(make("dt", "", pair[0]));
+      var dd = make("dd", "");
+      if (value && typeof value === "object" && value.nodeType) {
+        dd.appendChild(value);
+      } else if (Array.isArray(value)) {
+        dd.textContent = value.length > 0 ? value.join("、") : "（无）";
+      } else {
+        dd.textContent = String(value);
+      }
+      wrap.appendChild(dd);
+      list.appendChild(wrap);
+    }
+    return list;
+  }
+
+  function renderObsList(items) {
+    var list = make("ul", "obs-list");
+    for (var index = 0; index < items.length; index += 1) {
+      var item = items[index];
+      var row = make("li", "obs-list-item");
+      var head = make("div", "obs-list-head");
+      head.appendChild(make("span", "obs-list-title", item.title));
+      if (item.meta) head.appendChild(make("span", "obs-list-meta", item.meta));
+      row.appendChild(head);
+      if (item.body) row.appendChild(make("p", "obs-list-body", item.body));
+      if (item.extra) row.appendChild(item.extra);
+      list.appendChild(row);
+    }
+    return list;
+  }
+
+  function renderObsChip(text, tone) {
+    return make("span", "obs-chip" + (tone ? " " + tone : ""), text);
+  }
+
+  function renderObsEmpty(text) {
+    return make("p", "obs-empty", text);
+  }
+
+  function renderObsSection(title, text, open) {
+    var body = String(text === undefined || text === null ? "" : text);
+    if (body.trim().length === 0) return null;
+    var details = document.createElement("details");
+    details.className = "obs-section";
+    if (open) details.open = true;
+    var summary = make("summary", "");
+    summary.appendChild(make("span", "obs-section-title", title));
+    summary.appendChild(make("span", "obs-section-size", promptTextSize(body) + " 字"));
+    details.appendChild(summary);
+    details.appendChild(make("div", "obs-section-body", body));
+    return details;
+  }
+
+  var PROMPT_SECTIONS = [
+    { pattern: /^PREMISE=/, title: "项目参数" },
+    { pattern: /^故事圣经摘要：/, title: "故事圣经摘要" },
+    { pattern: /^风格指南：/, title: "风格指南" },
+    { pattern: /^本章大纲：/, title: "本章大纲" },
+    { pattern: /^下一章边界/, title: "下一章边界" },
+    { pattern: /^上一章全文/, title: "上一章全文" },
+    { pattern: /^逐章摘要/, title: "逐章摘要" },
+    { pattern: /^更早章节滚动摘要/, title: "更早章节滚动摘要" },
+    { pattern: /^本章 cast/, title: "本章 cast" },
+    { pattern: /^当前连续性状态：/, title: "连续性状态" },
+    { pattern: /^物品\\/概念状态：/, title: "物品/概念状态" },
+    { pattern: /^已回收伏笔：/, title: "伏笔账本" },
+    { pattern: /^开放伏笔：/, title: "伏笔账本" },
+    { pattern: /^本章写作任务：/, title: "写作任务" },
+    { pattern: /^本章必须完成的节拍：/, title: "本章节拍" },
+    { pattern: /^硬约束：/, title: "硬约束" },
+    { pattern: /^写作规则：/, title: "写作规则" },
+    { pattern: /^本章大纲：/, title: "本章大纲" },
+    { pattern: /^章节正文/, title: "章节正文" },
+    { pattern: /^改写规则：/, title: "改写规则" },
+    { pattern: /^审核要求：/, title: "审核要求" },
+    { pattern: /^factChecks 要求：/, title: "事实核对要求" },
+    { pattern: /^字段含义：/, title: "字段含义" },
+    { pattern: /^判定提醒：/, title: "判定提醒" },
+    { pattern: /^规则：/, title: "规则" },
+    { pattern: /^StoryBible 字段契约/, title: "字段契约" },
+    { pattern: /^Outline 形状/, title: "输出结构" },
+    { pattern: /^StoryState JSON 契约/, title: "输出结构" },
+    { pattern: /^Review JSON 契约/, title: "输出结构" },
+    { pattern: /^EndingAudit JSON 契约/, title: "输出结构" },
+    { pattern: /^BoundaryAudit JSON 契约/, title: "输出结构" },
+    { pattern: /^SeamRepair JSON 契约/, title: "输出结构" }
+  ];
+  var PROMPT_TEXT_SECTIONS = {
+    "上一章全文": true,
+    "逐章摘要": true,
+    "更早章节滚动摘要": true,
+    "章节正文": true
+  };
+  var PROMPT_OPEN_SECTIONS = {
+    "本章大纲": true,
+    "本章节拍": true,
+    "写作任务": true,
+    "硬约束": true,
+    "下一章边界": true,
+    "逐章摘要": true
+  };
+
+  function detectPromptSection(chunk, currentTitle) {
+    var firstLine = chunk.split("\\n")[0].trim();
+    for (var index = 0; index < PROMPT_SECTIONS.length; index += 1) {
+      if (PROMPT_SECTIONS[index].pattern.test(firstLine)) {
+        return {
+          title: PROMPT_SECTIONS[index].title,
+          known: true
+        };
+      }
+    }
+    if (PROMPT_TEXT_SECTIONS[currentTitle]) return null;
+    if (
+      firstLine.length > 0 &&
+      firstLine.length <= 48 &&
+      /[：:]$/.test(firstLine) &&
+      !/[。！？；]/.test(firstLine)
+    ) {
+      return {
+        title: firstLine.replace(/[：:]$/, ""),
+        known: false
+      };
+    }
+    return null;
+  }
+
+  function splitPromptSections(text) {
+    var chunks = [];
+    var buffer = [];
+    var rawLines = String(text || "").split(/\\r?\\n/);
+    for (var lineIndex = 0; lineIndex < rawLines.length; lineIndex += 1) {
+      var line = rawLines[lineIndex];
+      if (line.trim().length === 0) {
+        if (buffer.length > 0) {
+          chunks.push(buffer.join("\\n"));
+          buffer = [];
+        }
+      } else {
+        buffer.push(line);
+      }
+    }
+    if (buffer.length > 0) chunks.push(buffer.join("\\n"));
+
+    var sections = [];
+    var current = null;
+    for (var chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+      var chunk = chunks[chunkIndex];
+      var heading = detectPromptSection(
+        chunk,
+        current === null ? "" : current.title
+      );
+      if (heading) {
+        var lines = chunk.split("\\n");
+        var body = lines.slice(1).join("\\n");
+        current = { title: heading.title, body: body };
+        sections.push(current);
+      } else if (current) {
+        current.body = current.body.length > 0
+          ? current.body + "\\n\\n" + chunk
+          : chunk;
+      } else {
+        current = { title: "说明", body: chunk };
+        sections.push(current);
+      }
+    }
+    return sections;
+  }
+
+  function renderPromptSections(label, text, forceOpen) {
+    var host = document.createDocumentFragment();
+    var sections = splitPromptSections(text);
+    if (sections.length === 0) return host;
+    for (var index = 0; index < sections.length; index += 1) {
+      var section = sections[index];
+      var open =
+        forceOpen === true ||
+        PROMPT_OPEN_SECTIONS[section.title] === true ||
+        (section.title !== label && section.body.length <= 140);
+      var node = renderObsSection(
+        label + " · " + section.title,
+        section.body,
+        open
+      );
+      if (node) host.appendChild(node);
+    }
+    return host;
+  }
+
+  function renderDigest(digest) {
+    var box = make("div", "obs-digest");
+    if (!digest || typeof digest !== "object") {
+      box.appendChild(renderObsEmpty("还没有生成章节档案。"));
+      return box;
+    }
+
+    var groups = [
+      {
+        title: "核心设定",
+        items: (digest.coreSettings || []).map(function (entry) {
+          return {
+            title: entry.name,
+            meta: entry.type,
+            body: entry.detail
+          };
+        })
+      },
+      {
+        title: "本章人物",
+        items: (digest.characters || []).map(function (entry) {
+          var parts = [];
+          if (entry.roleInChapter) parts.push("角色：" + entry.roleInChapter);
+          if (entry.goal) parts.push("目标：" + entry.goal);
+          if (entry.change) parts.push("变化：" + entry.change);
+          return { title: entry.name, body: parts.join("；") };
+        })
+      },
+      {
+        title: "情节节点",
+        items: (digest.plotNodes || []).map(function (entry, index) {
+          return {
+            title: (index + 1) + ". " + entry.summary,
+            body: entry.impact ? "影响：" + entry.impact : ""
+          };
+        })
+      },
+      {
+        title: "关系进展",
+        items: (digest.relationshipProgress || []).map(function (entry) {
+          var body = entry.change || "";
+          if (entry.reason) body += (body ? "；" : "") + "原因：" + entry.reason;
+          return {
+            title: entry.source + " → " + entry.target,
+            body: body
+          };
+        })
+      },
+      {
+        title: "伏笔动作",
+        items: (digest.foreshadows || []).map(function (entry) {
+          return {
+            title: entry.title,
+            meta: promptActionLabel(entry.action),
+            body: entry.note
+          };
+        })
+      }
+    ];
+
+    var rendered = 0;
+    for (var index = 0; index < groups.length; index += 1) {
+      if (groups[index].items.length === 0) continue;
+      rendered += 1;
+      box.appendChild(make("div", "obs-subhead", groups[index].title));
+      box.appendChild(renderObsList(groups[index].items));
+    }
+    if (rendered === 0) {
+      box.appendChild(renderObsEmpty("档案为空。"));
+    }
+    return box;
+  }
+
+  function renderSummaryBlock(summary) {
+    if (!summary || !summary.text) {
+      return renderObsEmpty("这一章还没有摘要。");
+    }
+    var box = make("div", "obs-summary-block");
+    if (summary.fromChapter && summary.toChapter) {
+      box.appendChild(make(
+        "div",
+        "obs-card-meta",
+        "覆盖第 " + summary.fromChapter + "–" + summary.toChapter + " 章"
+      ));
+    }
+    box.appendChild(make("p", "obs-summary-text", summary.text));
+    return box;
+  }
+
+  function renderStatePayload(state) {
+    var box = make("div", "obs-state");
+    if (!state || typeof state !== "object") {
+      box.appendChild(renderObsEmpty("没有解析到状态对象。"));
+      return box;
+    }
+    var entities = Array.isArray(state.entities) ? state.entities : [];
+    if (entities.length > 0) {
+      box.appendChild(make("div", "obs-subhead", "实体状态"));
+      box.appendChild(renderObsList(entities.map(function (entry) {
+        var pairs = [];
+        var values = entry.state && typeof entry.state === "object" ? entry.state : {};
+        Object.keys(values).forEach(function (key) {
+          pairs.push(key + "：" + values[key]);
+        });
+        return {
+          title: entry.entityName,
+          meta: entry.updatedAtChapter ? "第 " + entry.updatedAtChapter + " 章" : "",
+          body: pairs.join("；")
+        };
+      })));
+    }
+    var relationships = Array.isArray(state.relationships) ? state.relationships : [];
+    if (relationships.length > 0) {
+      box.appendChild(make("div", "obs-subhead", "关系变化"));
+      box.appendChild(renderObsList(relationships.map(function (entry) {
+        return {
+          title: entry.source + " → " + entry.target,
+          meta: entry.kind,
+          body: entry.description
+        };
+      })));
+    }
+    var foreshadows = Array.isArray(state.foreshadows) ? state.foreshadows : [];
+    if (foreshadows.length > 0) {
+      box.appendChild(make("div", "obs-subhead", "伏笔状态"));
+      box.appendChild(renderObsList(foreshadows.map(function (entry) {
+        return {
+          title: entry.title,
+          meta: promptForeshadowLabel(entry.status),
+          body: entry.note
+        };
+      })));
+    }
+    var events = Array.isArray(state.events) ? state.events : [];
+    if (events.length > 0) {
+      box.appendChild(make("div", "obs-subhead", "事件"));
+      box.appendChild(renderObsList(events.map(function (entry) {
+        return {
+          title: entry.summary,
+          meta: entry.chapterNumber ? "第 " + entry.chapterNumber + " 章" : ""
+        };
+      })));
+    }
+    if (box.childNodes.length === 0) box.appendChild(renderObsEmpty("没有提取到状态变化。"));
+    return box;
+  }
+
+  function renderReviewPayload(review) {
+    var box = make("div", "obs-review");
+    if (!review || typeof review !== "object") {
+      box.appendChild(renderObsEmpty("没有解析到审校结果。"));
+      return box;
+    }
+    var head = make("div", "obs-chips");
+    head.appendChild(renderObsChip(
+      "结论：" + (review.gate === "pass" ? "通过" : review.gate === "block" ? "阻断" : "需要修订"),
+      review.gate === "pass" ? "is-done" : "is-warn"
+    ));
+    box.appendChild(head);
+    if (review.summary) box.appendChild(make("p", "obs-list-body", review.summary));
+    var issues = Array.isArray(review.issues) ? review.issues : [];
+    if (issues.length > 0) {
+      box.appendChild(renderObsList(issues.map(function (issue) {
+        var body = [];
+        if (issue.quote) body.push("原文：" + issue.quote);
+        if (issue.problem) body.push("问题：" + issue.problem);
+        if (issue.fix) body.push("建议：" + issue.fix);
+        return {
+          title: (issue.severity || "low") + " · " + (issue.type || "other"),
+          body: body.join("\\n")
+        };
+      })));
+    }
+    return box;
+  }
+
+  function renderAuditPayload(audit, kind) {
+    var box = make("div", "obs-audit");
+    if (!audit || typeof audit !== "object") {
+      box.appendChild(renderObsEmpty("没有解析到审计结果。"));
+      return box;
+    }
+    var fields = [];
+    if (kind === "ending_audit") {
+      fields.push(["是否收尾", audit.complete ? "是" : "否"]);
+      fields.push(["说明", audit.reason, true]);
+      fields.push(["还缺", audit.missing, true]);
+    } else {
+      fields.push(["接缝类型", audit.relation]);
+      fields.push(["上一章收尾", audit.previousEndComplete ? "完整" : "不完整"]);
+      fields.push(["钩子有效", audit.previousEndHookEffective ? "是" : "否"]);
+      fields.push(["下一章有锚点", audit.nextStartAnchored ? "是" : "否"]);
+      fields.push(["处理动作", audit.action]);
+      fields.push(["理由", audit.reason, true]);
+      fields.push(["修复要求", audit.repairBrief, true]);
+    }
+    box.appendChild(renderObsFields(fields));
+    if (Array.isArray(audit.factChecks) && audit.factChecks.length > 0) {
+      box.appendChild(make("div", "obs-subhead", "事实核对"));
+      box.appendChild(renderObsList(audit.factChecks.map(function (check) {
+        return {
+          title: check.fact,
+          meta: check.status,
+          body: check.evidence
+        };
+      })));
+    }
+    if (Array.isArray(audit.danglingThreads) && audit.danglingThreads.length > 0) {
+      box.appendChild(make("div", "obs-subhead", "悬空线索"));
+      box.appendChild(renderObsList(audit.danglingThreads.map(function (item) {
+        return { title: item };
+      })));
+    }
+    if (Array.isArray(audit.contradictions) && audit.contradictions.length > 0) {
+      box.appendChild(make("div", "obs-subhead", "矛盾"));
+      box.appendChild(renderObsList(audit.contradictions.map(function (item) {
+        return { title: item };
+      })));
+    }
+    return box;
+  }
+
+  function renderStructuredReply(kind, data) {
+    if (kind === "chapter_memory" && data && data.digest) {
+      var memoryBox = make("div", "obs-payload");
+      if (data.brief) {
+        memoryBox.appendChild(make("div", "obs-subhead", "本章摘要"));
+        memoryBox.appendChild(make("p", "obs-summary-text", data.brief));
+      }
+      memoryBox.appendChild(make("div", "obs-subhead", "滚动摘要"));
+      memoryBox.appendChild(renderSummaryBlock(data.summary));
+      memoryBox.appendChild(make("div", "obs-subhead", "章节档案"));
+      memoryBox.appendChild(renderDigest(data.digest));
+      return memoryBox;
+    }
+    if (kind === "state") return renderStatePayload(data);
+    if (kind === "review") return renderReviewPayload(data);
+    if (kind === "ending_audit" || kind === "boundary_audit") {
+      return renderAuditPayload(data, kind);
+    }
+    if (kind === "bible") {
+      var bibleBox = make("div", "obs-payload");
+      bibleBox.appendChild(renderObsFields([
+        ["Logline", data && data.logline, true],
+        ["Synopsis", data && data.synopsis, true],
+        ["Tone", data && data.tone],
+        ["Ending", data && data.ending, true],
+        ["角色数", data && Array.isArray(data.characters) ? data.characters.length : 0],
+        ["伏笔数", data && Array.isArray(data.foreshadowLedger) ? data.foreshadowLedger.length : 0]
+      ]));
+      var bibleDetails = document.createElement("details");
+      bibleDetails.className = "obs-json-branch";
+      bibleDetails.appendChild(make("summary", "", "完整故事圣经"));
+      bibleDetails.appendChild(renderJsonTree(data, 0));
+      bibleBox.appendChild(bibleDetails);
+      return bibleBox;
+    }
+    if (kind === "outline" || kind === "outline_extension") {
+      var outlineBox = make("div", "obs-payload");
+      var volumes = Array.isArray(data && data.volumes) ? data.volumes : [];
+      var chapterCount = 0;
+      for (var volumeIndex = 0; volumeIndex < volumes.length; volumeIndex += 1) {
+        var stages = Array.isArray(volumes[volumeIndex].stages) ? volumes[volumeIndex].stages : [];
+        for (var stageIndex = 0; stageIndex < stages.length; stageIndex += 1) {
+          chapterCount += Array.isArray(stages[stageIndex].chapters) ? stages[stageIndex].chapters.length : 0;
+        }
+      }
+      outlineBox.appendChild(renderObsFields([
+        ["卷数", volumes.length],
+        ["章数", chapterCount]
+      ]));
+      var outlineDetails = document.createElement("details");
+      outlineDetails.className = "obs-json-branch";
+      outlineDetails.appendChild(make("summary", "", "完整大纲"));
+      outlineDetails.appendChild(renderJsonTree(data, 0));
+      outlineBox.appendChild(outlineDetails);
+      return outlineBox;
+    }
+    return renderJsonTree(data, 0);
+  }
+
+  function renderToolArguments(call, args) {
+    var box = make("div", "obs-tool-body");
+    var raw = make("div", "obs-tool-fields");
+    function addField(label, value) {
+      if (value === undefined || value === null || value === "") return;
+      var item = make("div", "obs-tool-field");
+      item.appendChild(make("dt", "", label));
+      item.appendChild(make("dd", "", String(value)));
+      raw.appendChild(item);
+    }
+
+    if (call.name === "chapter_commit") {
+      addField("章节", args.chapterNumber);
+      addField("方式", args.append === true ? "追加补写" : "提交正文");
+      if (typeof args.text === "string") addField("正文", promptTextSize(args.text) + " 字");
+    } else if (call.name === "foreshadow_update") {
+      addField("章节", args.chapterNumber);
+      addField("标题", args.title);
+      addField("动作", promptActionLabel(args.action));
+      addField("说明", args.note);
+      addField("计划回收", args.payoffChapter);
+    } else if (call.name === "story_digest") {
+      addField("起止章", (args.fromChapter || "?") + " – " + (args.toChapter || "?"));
+    } else if (call.name === "story_recall") {
+      addField("层级", args.level === "rolling" ? "滚动摘要" : "逐章摘要");
+      addField("起止章", (args.fromChapter || "?") + " – " + (args.toChapter || "?"));
+    } else if (call.name === "chapter_read") {
+      addField("章节", args.chapterNumber);
+      addField("最多字符", args.maxChars);
+    } else if (call.name === "story_graph") {
+      addField("节点名", args.nodeName);
+      addField("节点类型", args.nodeKind);
+      addField("章节范围", (args.chapterFrom || "1") + " – " + (args.chapterTo || "当前"));
+      addField("上限", args.limit);
+    } else if (call.name === "run_status") {
+      addField("章节", args.chapterNumber);
+    }
+
+    if (raw.childNodes.length > 0) box.appendChild(raw);
+    if (call.name === "chapter_commit" && typeof args.text === "string") {
+      var textDetails = document.createElement("details");
+      textDetails.className = "obs-json-branch";
+      textDetails.appendChild(make(
+        "summary",
+        "",
+        "本次提交的正文 · " + promptTextSize(args.text) + " 字"
+      ));
+      textDetails.appendChild(make("pre", "obs-tool-text", args.text));
+      box.appendChild(textDetails);
+    }
+    var hasKnownArgs =
+      call.name === "chapter_commit" ||
+      call.name === "foreshadow_update" ||
+      call.name === "story_digest" ||
+      call.name === "story_recall" ||
+      call.name === "chapter_read" ||
+      call.name === "story_graph" ||
+      call.name === "run_status";
+    if (!hasKnownArgs && args && typeof args === "object") {
+      box.appendChild(renderJsonTree(args, 0));
+    }
+    if (box.childNodes.length === 0) {
+      box.appendChild(make("p", "obs-tool-empty", "没有传入参数。"));
+    }
+    return box;
+  }
+
+  function renderToolResult(result) {
+    var text = typeof result.text === "string" ? result.text : String(result.text || "");
+    var parsed = promptParseJson(text);
+    var box = make("div", "obs-tool-body");
+    if (result.isError) {
+      box.appendChild(make("p", "obs-error", text || "工具执行失败。"));
+      return box;
+    }
+
+    if (result.toolName === "chapter_commit" && parsed && typeof parsed === "object") {
+      box.appendChild(renderObsFields([
+        ["章节", parsed.chapterNumber],
+        ["字数", parsed.wordCount],
+        ["目标", parsed.targetWords],
+        ["状态", promptChapterStatusLabel(parsed.status)],
+        ["提示", parsed.message, true]
+      ]));
+      return box;
+    }
+    if (result.toolName === "foreshadow_update" && parsed && typeof parsed === "object") {
+      box.appendChild(renderObsFields([
+        ["标题", parsed.title],
+        ["状态", promptForeshadowLabel(parsed.status)],
+        ["设置章", parsed.setupChapter],
+        ["计划回收", parsed.plannedPayoffChapter],
+        ["回收章", parsed.resolvedChapter],
+        ["备注", parsed.note, true]
+      ]));
+      return box;
+    }
+    if (result.toolName === "story_graph" && parsed && typeof parsed === "object") {
+      box.appendChild(renderObsFields([
+        ["可用", parsed.available === false ? "否" : "是"],
+        ["节点", parsed.nodeCount],
+        ["关系", parsed.edgeCount],
+        ["原因", parsed.reason, true]
+      ]));
+      var graphDetails = document.createElement("details");
+      graphDetails.className = "obs-json-branch";
+      graphDetails.appendChild(make("summary", "", "图谱数据"));
+      graphDetails.appendChild(renderJsonTree(parsed, 0));
+      box.appendChild(graphDetails);
+      return box;
+    }
+    if (parsed !== undefined) {
+      var details = document.createElement("details");
+      details.className = "obs-json-branch";
+      details.appendChild(make("summary", "", "结构化结果"));
+      details.appendChild(renderJsonTree(parsed, 0));
+      box.appendChild(details);
+      return box;
+    }
+    if (text.trim().length > 0) {
+      var textDetails = document.createElement("details");
+      textDetails.className = "obs-json-branch";
+      textDetails.open = text.length < 900 || result.toolName === "story_recall";
+      textDetails.appendChild(make("summary", "", "文本结果 · " + promptTextSize(text) + " 字"));
+      textDetails.appendChild(make("pre", "obs-tool-text", text));
+      box.appendChild(textDetails);
+    } else {
+      box.appendChild(make("p", "obs-tool-empty", "工具返回为空。"));
+    }
+    return box;
+  }
+
+  function renderToolCall(call, result) {
+    var args = call.arguments;
+    if (typeof args === "string") {
+      var parsedArgs = promptParseJson(args);
+      args = parsedArgs === undefined ? {} : parsedArgs;
+    }
+    if (!args || typeof args !== "object") args = {};
+
+    var card = make("div", "obs-tool");
+    var head = make("div", "obs-tool-head");
+    var name = make("div", "obs-tool-name");
+    name.appendChild(make("span", "", promptToolLabel(call.name)));
+    name.appendChild(make("code", "", call.name));
+    head.appendChild(name);
+    var stateText = result === undefined
+      ? "等待返回"
+      : result.isError ? "执行失败" : "执行完成";
+    head.appendChild(renderObsChip(stateText, result === undefined ? "" : result.isError ? "is-error" : "is-done"));
+    card.appendChild(head);
+    card.appendChild(renderToolArguments(call, args));
+    if (result !== undefined) {
+      card.appendChild(make("div", "obs-subhead", "工具返回"));
+      card.appendChild(renderToolResult(result));
+    }
+    return card;
+  }
+
+  function takeToolResult(results, used, call) {
+    var callId = call.id;
+    for (var index = 0; index < results.length; index += 1) {
+      if (used[index]) continue;
+      if (callId && results[index].toolCallId === callId) {
+        used[index] = true;
+        return results[index];
+      }
+    }
+    for (var nameIndex = 0; nameIndex < results.length; nameIndex += 1) {
+      if (used[nameIndex]) continue;
+      if (results[nameIndex].toolName === call.name) {
+        used[nameIndex] = true;
+        return results[nameIndex];
+      }
+    }
+    return undefined;
+  }
+
+  function renderPromptReply(reply, index, toolResults, usedResults, kind) {
+    var value = promptIsObject(reply) ? reply : {};
+    var toolCalls = Array.isArray(value.toolCalls) ? value.toolCalls : [];
+    var box = make("div", "obs-reply");
+    var head = make("div", "obs-reply-head");
+    head.appendChild(make("span", "", "回复 " + (index + 1)));
+    if (value.model) head.appendChild(make("span", "", String(value.model)));
+    if (value.stopReason) head.appendChild(make("span", "", "停止：" + value.stopReason));
+    if (value.text) head.appendChild(make("span", "", promptTextSize(value.text) + " 字"));
+    if (toolCalls.length > 0) head.appendChild(make("span", "", "工具调用 " + toolCalls.length));
+    box.appendChild(head);
+
+    if (value.thinking) {
+      var thinking = renderObsSection("思考过程", value.thinking, false);
+      if (thinking) box.appendChild(thinking);
+    }
+    if (value.text) {
+      var parsed = promptParseJson(value.text);
+      if (parsed !== undefined && promptIsObject(parsed)) {
+        box.appendChild(renderStructuredReply(kind, parsed));
+      } else if (parsed !== undefined) {
+        box.appendChild(renderJsonTree(parsed, 0));
+      } else {
+        box.appendChild(make("div", "obs-section-body", value.text));
+      }
+    }
+    for (var callIndex = 0; callIndex < toolCalls.length; callIndex += 1) {
+      var call = toolCalls[callIndex];
+      var result = takeToolResult(toolResults, usedResults, call);
+      box.appendChild(renderToolCall(call, result));
+    }
+    if (!value.text && !value.thinking && toolCalls.length === 0) {
+      box.appendChild(make("p", "obs-tool-empty", "本轮没有捕获到文本回复。"));
+    }
+    return box;
+  }
+
+  function renderPromptEntry(entry, toolResults, usedResults) {
+    var article = make("article", "prompt-entry");
+    var head = make("div", "prompt-entry-head");
+    head.appendChild(make(
+      "b",
+      "",
+      entry.source === "director"
+        ? "导演第 " + (entry.round || 0) + " 轮"
+        : "模型第 " + (entry.round || 0) + " 次调用"
+    ));
+    head.appendChild(renderObsChip(
+      entry.source === "director" ? "导演会话" : "后台模型",
+      entry.source === "director" ? "is-director" : "is-model"
+    ));
+    head.appendChild(renderObsChip(promptKindLabel(entry.kind), "is-model"));
+    if (typeof entry.chapterNumber === "number") {
+      head.appendChild(make("span", "prompt-meta", "第 " + entry.chapterNumber + " 章"));
+    }
+    var timeText = promptTime(entry.at);
+    if (timeText) head.appendChild(make("span", "prompt-meta", timeText));
+    var duration = formatDuration(entry.durationMs);
+    if (duration) head.appendChild(make("span", "prompt-meta", "用时 " + duration));
+    if (entry.error) head.appendChild(renderObsChip("出错", "is-error"));
+    article.appendChild(head);
+
+    if (entry.systemPrompt) {
+      var system = renderObsSection("System Prompt", entry.systemPrompt, false);
+      if (system) article.appendChild(system);
+    }
+    if (entry.prompt) {
+      article.appendChild(renderPromptSections("Prompt", entry.prompt, false));
+    }
+
+    var replies = Array.isArray(entry.replies) ? entry.replies : [];
+    for (var index = 0; index < replies.length; index += 1) {
+      article.appendChild(renderPromptReply(
+        replies[index],
+        index,
+        toolResults,
+        usedResults,
+        entry.kind
+      ));
+    }
+    if (replies.length === 0 && !entry.error) {
+      article.appendChild(make("p", "obs-tool-empty", "本轮没有捕获到回复。"));
+    }
+
+    for (var resultIndex = 0; resultIndex < toolResults.length; resultIndex += 1) {
+      if (usedResults[resultIndex]) continue;
+      usedResults[resultIndex] = true;
+      var leftover = make("div", "obs-tool");
+      var leftoverHead = make("div", "obs-tool-head");
+      leftoverHead.appendChild(make("div", "obs-tool-name", promptToolLabel(toolResults[resultIndex].toolName)));
+      leftoverHead.appendChild(renderObsChip("未匹配调用", "is-warn"));
+      leftover.appendChild(leftoverHead);
+      leftover.appendChild(renderToolResult(toolResults[resultIndex]));
+      article.appendChild(leftover);
+    }
+
+    if (entry.error) {
+      article.appendChild(make("p", "obs-error", "错误：" + entry.error));
+    }
+    return article;
+  }
+
+  function promptTime(iso) {
+    var date = new Date(iso);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleString("zh-CN", { hour12: false });
+  }
+
+  function promptTextSize(value) {
+    return String(value || "").length.toLocaleString("zh-CN");
+  }
+
+
+  function promptChapterStatusLabel(status) {
+    var labels = {
+      planned: "未写",
+      drafted: "已起草",
+      reviewed: "已审校",
+      committed: "已完成",
+      needs_attention: "待处理"
+    };
+    return labels[status] || status || "未知";
+  }
+
+  function renderPromptRoundsView() {
+    var payload = promptState.promptPayload;
+    if (!payload) {
+      promptLogBody.appendChild(renderObsEmpty(
+        promptState.errors && promptState.errors.entries
+          ? "对话记录读取失败：" + promptState.errors.entries
+          : "没有读取到对话记录。"
+      ));
+      return;
+    }
+    var entries = Array.isArray(payload.entries) ? payload.entries : [];
+    var total = typeof payload.total === "number" ? payload.total : entries.length;
+    var toolCallCount = 0;
+    var errorCount = 0;
+    var durationTotal = 0;
+    for (var index = 0; index < entries.length; index += 1) {
+      var replies = Array.isArray(entries[index].replies) ? entries[index].replies : [];
+      for (var replyIndex = 0; replyIndex < replies.length; replyIndex += 1) {
+        var calls = Array.isArray(replies[replyIndex].toolCalls) ? replies[replyIndex].toolCalls : [];
+        toolCallCount += calls.length;
+      }
+      if (entries[index].error) errorCount += 1;
+      if (typeof entries[index].durationMs === "number") {
+        durationTotal += entries[index].durationMs;
+      }
+    }
+    promptLogCount.textContent =
+      entries.length + " 轮" +
+      (entries.length < total ? " · 共 " + total + " 轮（显示最近部分）" : "");
+
+    promptLogBody.appendChild(renderObsStats([
+      ["对话轮次", String(entries.length)],
+      ["工具调用", String(toolCallCount)],
+      ["模型耗时", formatDuration(durationTotal) || "—"],
+      ["错误", String(errorCount)]
+    ]));
+    promptLogBody.appendChild(make(
+      "p",
+      "obs-timeline-note",
+      "按时间顺序排列：导演会话负责写正文，后台模型调用负责摘要、状态提取等。展开每轮可查看结构化上下文、回复和工具返回。"
+    ));
+
+    if (entries.length === 0) {
+      promptLogBody.appendChild(renderObsEmpty(
+        "这一章还没有对话记录。开始写作后，每轮 prompt、回复、摘要和伏笔会出现在这里。"
+      ));
+      return;
+    }
+
+    var list = make("div", "prompt-list");
+    for (var entryIndex = 0; entryIndex < entries.length; entryIndex += 1) {
+      var entry = entries[entryIndex];
+      var entryResults = Array.isArray(entry.toolResults) ? entry.toolResults : [];
+      var usedResults = {};
+      list.appendChild(renderPromptEntry(entry, entryResults, usedResults));
+    }
+    promptLogBody.appendChild(list);
+  }
+
+  function renderPromptMemoryView() {
+    var chapter = promptState.chapterPayload;
+    if (!chapter) {
+      promptLogBody.appendChild(renderObsEmpty(
+        promptState.errors && promptState.errors.chapter
+          ? "章节档案读取失败：" + promptState.errors.chapter
+          : "没有读取到这一章的摘要与档案。"
+      ));
+      promptLogCount.textContent = "";
+      return;
+    }
+
+    var summary = chapter.summary;
+    var digest = chapter.digest;
+    promptLogCount.textContent = "第 " + chapter.number + " 章 · " +
+      (summary ? "摘要覆盖第 " + summary.fromChapter + "–" + summary.toChapter + " 章" : "暂无摘要");
+
+    promptLogBody.appendChild(renderObsStats([
+      ["章节", "第 " + chapter.number + " 章"],
+      ["字数", String(chapter.wordCount || 0)],
+      ["状态", promptChapterStatusLabel(chapter.status)],
+      ["伏笔动作", String(digest && Array.isArray(digest.foreshadows) ? digest.foreshadows.length : 0)]
+    ]));
+
+    var outline = chapter.outline;
+    if (outline) {
+      var outlineCard = renderObsCard(
+        "本章大纲",
+        "第 " + outline.number + " 章",
+        [renderObsFields([
+          ["标题", outline.title, true],
+          ["摘要", outline.summary, true],
+          ["视角", outline.pov],
+          ["出场人物", outline.cast],
+          ["目标", outline.goal, true],
+          ["冲突", outline.conflict],
+          ["转折", outline.turn],
+          ["揭示", outline.reveal],
+          ["章末钩子", outline.hook, true]
+        ])]
+      );
+      promptLogBody.appendChild(outlineCard);
+    }
+
+    var briefText = typeof chapter.brief === "string" ? chapter.brief.trim() : "";
+    var briefMeta = briefText ? "逐章 2–3 句" : "缺失";
+    if (!briefText && digest && Array.isArray(digest.plotNodes)) {
+      var briefNodes = digest.plotNodes
+        .map(function (node) { return String(node.summary || "").trim(); })
+        .filter(function (text) { return text.length > 0; })
+        .slice(0, 3);
+      if (briefNodes.length > 0) {
+        briefText = briefNodes.join("；");
+        if (chapter.outline && chapter.outline.hook) {
+          briefText += "；章末钩子：" + chapter.outline.hook;
+        }
+        briefMeta = "旧章节 · 据档案整理";
+      }
+    }
+    if (!briefText && chapter.outline && chapter.outline.summary) {
+      briefText = String(chapter.outline.summary);
+      briefMeta = "旧章节 · 大纲回退";
+    }
+    var briefCard = renderObsCard(
+      "本章摘要",
+      briefMeta,
+      [briefText ? make("p", "obs-summary-text", briefText) : make(
+        "p",
+        "obs-note is-warn",
+        "这一章还没有可用的摘要；旧章节会尝试退回章节档案或大纲摘要。"
+      )]
+    );
+    promptLogBody.appendChild(briefCard);
+
+    var summaryCard = renderObsCard(
+      "滚动摘要",
+      summary ? "第 " + summary.fromChapter + "–" + summary.toChapter + " 章" : "缺失",
+      [summary ? renderSummaryBlock(summary) : make(
+        "p",
+        "obs-note is-warn",
+        "这一章还没有生成滚动摘要。更早章节注入时会退回大纲摘要。"
+      )]
+    );
+    promptLogBody.appendChild(summaryCard);
+
+    promptLogBody.appendChild(renderObsCard(
+      "章节档案",
+      digest ? "可检索的结构化记忆" : "缺失",
+      [digest ? renderDigest(digest) : make(
+        "p",
+        "obs-note is-warn",
+        "这一章还没有生成 digest；story_digest 只能退回大纲信息。"
+      )]
+    ));
+  }
+
+  function renderPromptForeshadowView() {
+    var payload = promptState.foreshadowPayload;
+    if (!payload) {
+      promptLogBody.appendChild(renderObsEmpty(
+        promptState.errors && promptState.errors.foreshadow
+          ? "伏笔账本读取失败：" + promptState.errors.foreshadow
+          : "没有读取到伏笔账本。"
+      ));
+      promptLogCount.textContent = "";
+      return;
+    }
+    if (payload.available === false) {
+      promptLogCount.textContent = "0 条伏笔";
+      promptLogBody.appendChild(renderObsCard(
+        "伏笔账本",
+        "未建立",
+        [make(
+          "p",
+          "obs-note",
+          "这本书还没有 story.db 伏笔账本，可能是在伏笔记录功能启用前生成的。重新续写一章后会开始记录。"
+        )]
+      ));
+      return;
+    }
+
+    var records = Array.isArray(payload.records) ? payload.records : [];
+    var counts = payload.counts || {};
+    promptLogCount.textContent = records.length + " 条伏笔";
+    promptLogBody.appendChild(renderObsStats([
+      ["伏笔总数", String(counts.total || records.length)],
+      ["未回收", String(counts.open || 0)],
+      ["已回收", String(counts.resolved || 0)],
+      ["已放弃", String(counts.abandoned || 0)]
+    ]));
+
+    var openRecords = [];
+    var closedRecords = [];
+    for (var index = 0; index < records.length; index += 1) {
+      var record = records[index];
+      if (record.status === "resolved" || record.status === "abandoned") {
+        closedRecords.push(record);
+      } else {
+        openRecords.push(record);
+      }
+    }
+
+    function recordItem(record) {
+      var metaParts = [promptForeshadowLabel(record.status)];
+      metaParts.push("设置：第 " + record.setupChapter + " 章");
+      if (record.plannedPayoffChapter !== undefined) {
+        metaParts.push("计划回收：第 " + record.plannedPayoffChapter + " 章");
+      }
+      if (record.resolvedChapter !== undefined) {
+        metaParts.push("回收：第 " + record.resolvedChapter + " 章");
+      }
+      if (record.updatedAtChapter) {
+        metaParts.push("最近更新：第 " + record.updatedAtChapter + " 章");
+      }
+      return {
+        title: record.title,
+        meta: metaParts.join(" · "),
+        body: record.note
+      };
+    }
+
+    promptLogBody.appendChild(renderObsCard(
+      "未回收 / 推进中",
+      openRecords.length + " 条",
+      openRecords.length > 0
+        ? [renderObsList(openRecords.map(recordItem))]
+        : [make("p", "obs-note", "没有未回收的伏笔。")]
+    ));
+    promptLogBody.appendChild(renderObsCard(
+      "已回收 / 已放弃",
+      closedRecords.length + " 条",
+      closedRecords.length > 0
+        ? [renderObsList(closedRecords.map(recordItem))]
+        : [make("p", "obs-note", "还没有已回收或已放弃的伏笔。")]
+    ));
+  }
+
+  function updatePromptTabs() {
+    var tabs = promptLogTabs.querySelectorAll(".prompt-tab");
+    for (var index = 0; index < tabs.length; index += 1) {
+      var active = tabs[index].getAttribute("data-prompt-view") === promptState.view;
+      tabs[index].classList.toggle("is-active", active);
+      tabs[index].setAttribute("aria-selected", active ? "true" : "false");
+    }
+  }
+
+  function renderPromptObservation() {
+    if (!promptState) return;
+    updatePromptTabs();
+    promptLogBody.textContent = "";
+    if (promptState.chapterNumber === null) {
+      promptLogCount.textContent = "";
+      promptLogBody.appendChild(renderObsEmpty(
+        "这本书还没有已写章节。完成一章后，这里会显示每轮 prompt、回复、摘要和伏笔。"
+      ));
+      return;
+    }
+    if (promptState.loading) {
+      promptLogCount.textContent = "读取中…";
+      promptLogBody.appendChild(renderObsEmpty("正在读取观测数据…"));
+      return;
+    }
+    if (promptState.view === "memory") {
+      renderPromptMemoryView();
+    } else if (promptState.view === "foreshadow") {
+      renderPromptForeshadowView();
+    } else {
+      renderPromptRoundsView();
+    }
+  }
+
+  function setPromptView(view) {
+    if (!promptState) return;
+    promptState.view = view;
+    promptLogBody.scrollTop = 0;
+    renderPromptObservation();
+  }
+
+  function fillPromptChapterSelect(chapters, selected) {
+    promptLogChapter.textContent = "";
+    if (chapters.length === 0) {
+      var emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = "暂无已写章节";
+      promptLogChapter.appendChild(emptyOption);
+      promptLogChapter.disabled = true;
+      return;
+    }
+    promptLogChapter.disabled = false;
+
+    for (var index = 0; index < chapters.length; index += 1) {
+      var option = document.createElement("option");
+      option.value = String(chapters[index].number);
+      var title = String(chapters[index].title || "");
+      option.textContent = new RegExp("^第\\\\s*(?:\\\\d+|[零〇一二三四五六七八九十百千万两]+)\\\\s*章").test(title)
+        ? title
+        : "第" + chapters[index].number + "章 " + title;
+      promptLogChapter.appendChild(option);
+    }
+
+    var found = false;
+    for (var checkIndex = 0; checkIndex < chapters.length; checkIndex += 1) {
+      if (chapters[checkIndex].number === selected) {
+        found = true;
+        break;
+      }
+    }
+    promptLogChapter.value = found
+      ? String(selected)
+      : String(chapters[chapters.length - 1].number);
+  }
+
+  function promptSafeApi(path) {
+    return api(path).then(
+      function (data) { return { data: data }; },
+      function (error) {
+        return { error: error instanceof Error ? error.message : String(error) };
+      }
+    );
+  }
+
+  function loadPromptObservation() {
+    if (!promptState || promptState.chapterNumber === null) {
+      renderPromptObservation();
+      return;
+    }
+    var book = promptState.book;
+    var chapterNumber = promptState.chapterNumber;
+
+    promptRequestId += 1;
+    var requestId = promptRequestId;
+    promptState.loading = true;
+    promptState.promptPayload = null;
+    promptState.chapterPayload = null;
+    promptState.foreshadowPayload = null;
+    promptState.errors = null;
+    renderPromptObservation();
+
+    var projectPath = "/api/projects/" + encodeURIComponent(book.id);
+    Promise.all([
+      promptSafeApi(projectPath + "/prompt-log?chapterNumber=" +
+        encodeURIComponent(chapterNumber) + "&limit=200"),
+      promptSafeApi(projectPath + "/chapters/" + encodeURIComponent(chapterNumber)),
+      promptSafeApi(projectPath + "/foreshadows?chapterNumber=" +
+        encodeURIComponent(chapterNumber))
+    ]).then(function (results) {
+      if (!promptState || requestId !== promptRequestId) return;
+      promptState.loading = false;
+      promptState.promptPayload = results[0].data || null;
+      promptState.chapterPayload = results[1].data || null;
+      promptState.foreshadowPayload = results[2].data || null;
+      promptState.errors = {
+        entries: results[0].error || "",
+        chapter: results[1].error || "",
+        foreshadow: results[2].error || ""
+      };
+      renderPromptObservation();
+    });
+  }
+
+  function openPromptLog(book, chapterNumber) {
+    promptRequestId += 1;
+    var requestId = promptRequestId;
+    promptState = {
+      book: book,
+      toc: bookToc[book.id] || null,
+      chapterNumber: typeof chapterNumber === "number" ? chapterNumber : null,
+      view: "rounds",
+      loading: false,
+      promptPayload: null,
+      chapterPayload: null,
+      foreshadowPayload: null,
+      errors: null
+    };
+
+    promptLogTitle.textContent = "《" + book.title + "》写作观测";
+    promptLogMeta.textContent = "逐轮查看 prompt、回复、章节摘要与伏笔账本；结构化内容已转成可读卡片。";
+    promptLogCount.textContent = "";
+    promptLogChapter.textContent = "";
+    promptLogChapter.disabled = true;
+    promptLogBody.textContent = "";
+    promptLogBody.scrollTop = 0;
+    promptLogBody.appendChild(renderObsEmpty("正在读取章节目录…"));
+    updatePromptTabs();
+    promptOverlay.hidden = false;
+    promptDrawer.hidden = false;
+    document.body.classList.add("drawer-open");
+    requestAnimationFrame(function () {
+      promptOverlay.classList.add("is-open");
+      promptDrawer.classList.add("is-open");
+      promptLogClose.focus();
+    });
+
+    var tocPromise = promptState.toc
+      ? Promise.resolve(promptState.toc)
+      : loadBookToc(book.id, false);
+    tocPromise.then(function (toc) {
+      if (!promptState || requestId !== promptRequestId) return;
+      promptState.toc = toc;
+      var chapters = toc && toc.outlineReady ? bookTocChapters(toc) : [];
+      var written = [];
+      for (var index = 0; index < chapters.length; index += 1) {
+        if (chapters[index].hasText) written.push(chapters[index]);
+      }
+      var selected = promptState.chapterNumber;
+      var selectedExists = false;
+      for (var checkIndex = 0; checkIndex < written.length; checkIndex += 1) {
+        if (written[checkIndex].number === selected) {
+          selectedExists = true;
+          break;
+        }
+      }
+      if (!selectedExists) {
+        selected = written.length > 0 ? written[written.length - 1].number : null;
+      }
+      promptState.chapterNumber = selected;
+      fillPromptChapterSelect(written, selected);
+      if (selected === null) {
+        renderPromptObservation();
+        return;
+      }
+      loadPromptObservation();
+    }).catch(function (error) {
+      if (!promptState || requestId !== promptRequestId) return;
+      promptLogBody.textContent = "";
+      promptLogBody.appendChild(renderObsEmpty(
+        "目录读取失败：" + (error instanceof Error ? error.message : String(error))
+      ));
+    });
+  }
+
+  function closePromptLog() {
+    if (!promptState) return;
+    promptState = null;
+    promptRequestId += 1;
+    promptOverlay.classList.remove("is-open");
+    promptDrawer.classList.remove("is-open");
+    document.body.classList.remove("drawer-open");
+    setTimeout(function () {
+      promptOverlay.hidden = true;
+      promptDrawer.hidden = true;
     }, 180);
   }
 
@@ -3314,6 +4989,23 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 
   readerClose.addEventListener("click", closeReader);
   readerOverlay.addEventListener("click", closeReader);
+  promptLogClose.addEventListener("click", closePromptLog);
+  promptOverlay.addEventListener("click", closePromptLog);
+  promptLogChapter.addEventListener("change", function () {
+    if (!promptState) return;
+    var chapterNumber = Number(promptLogChapter.value);
+    if (!isFinite(chapterNumber) || chapterNumber < 1) return;
+    promptState.chapterNumber = chapterNumber;
+    promptLogBody.scrollTop = 0;
+    loadPromptObservation();
+  });
+  promptLogTabs.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!target || !target.closest) return;
+    var button = target.closest("button[data-prompt-view]");
+    if (!button || !promptLogTabs.contains(button)) return;
+    setPromptView(button.getAttribute("data-prompt-view"));
+  });
   readerPrev.addEventListener("click", function () {
     if (!readerState) return;
     openReaderAt(readerState.book, readerState.toc, readerState.chapters, readerState.index - 1);
@@ -3376,7 +5068,8 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
       body: JSON.stringify({
         premise: premise,
         maxChapters: maxChapters,
-        chapterWords: chapterWords
+        chapterWords: chapterWords,
+        reviewEnabled: reviewEnabledInput ? reviewEnabledInput.checked : false
       })
     }).then(function (data) {
       if (!data || !data.projectId || !data.runId) {

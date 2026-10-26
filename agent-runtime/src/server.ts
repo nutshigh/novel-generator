@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import {
   createServer,
@@ -11,7 +12,13 @@ import { fileURLToPath } from "node:url";
 import { FakeAiGateway } from "./ai/fakeGateway.js";
 import type { AiGateway } from "./ai/gateway.js";
 import type { ModelConfigInput } from "./ai/piGateway.js";
+import {
+  createDirectorModelHandle,
+  createEnvDirectorModelHandle,
+  createPiDirectorSessionFactory,
+} from "./agent/directorSession.js";
 import { envModelName, hasEnvModelConfig, loadConfig } from "./config.js";
+import { openForeshadowStore } from "./domain/foreshadowStore.js";
 import { MAX_EXTENSION_BATCH } from "./domain/schemas.js";
 import type { Project, RunProgress } from "./domain/schemas.js";
 import { JsonProjectStore, type ProjectStore } from "./domain/store.js";
@@ -31,6 +38,8 @@ import {
   type StoredRun,
 } from "./runStore.js";
 import { continueNovel } from "./story/continuation.js";
+import type { DirectorSessionFactory } from "./story/director.js";
+import { readPromptLog } from "./story/promptLog.js";
 import { listBooks, loadBookToc, loadChapter } from "./story/library.js";
 import {
   flattenOutlineChapters,
@@ -59,6 +68,7 @@ export interface StartServerOptions {
   settingsPath?: string;
   runsDir?: string;
   graph?: NovelGraphStore;
+  directorSessionFactory?: DirectorSessionFactory;
   gatewayFactory?: (
     project: Project,
     modelConfig?: ModelConfigInput,
@@ -104,6 +114,7 @@ interface ServerContext {
   outputDir: string;
   fakeDefault: boolean;
   port: number;
+  directorSessionFactory?: DirectorSessionFactory;
   gatewayFactory?: (
     project: Project,
     modelConfig?: ModelConfigInput,
@@ -210,6 +221,18 @@ function optionalInteger(
   return value;
 }
 
+function optionalBoolean(
+  body: Record<string, unknown>,
+  key: string,
+): boolean | undefined {
+  const value = body[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") {
+    throw new RequestError(400, `${key} must be a boolean.`);
+  }
+  return value;
+}
+
 function parseModelConfig(value: unknown): ModelConfigInput | undefined {
   if (value === undefined) return undefined;
   if (!isRecord(value)) {
@@ -288,6 +311,7 @@ function parseCreateProjectBody(value: unknown): ParsedProjectBody {
 
   const maxChapters = optionalInteger(value, "maxChapters");
   const chapterWords = optionalInteger(value, "chapterWords");
+  const reviewEnabled = optionalBoolean(value, "reviewEnabled");
   const modelConfig = parseModelConfig(value.modelConfig);
 
   return {
@@ -295,6 +319,7 @@ function parseCreateProjectBody(value: unknown): ParsedProjectBody {
       premise,
       ...(maxChapters === undefined ? {} : { maxChapters }),
       ...(chapterWords === undefined ? {} : { chapterWords }),
+      ...(reviewEnabled === undefined ? {} : { reviewEnabled }),
     },
     fake,
     ...(modelConfig === undefined ? {} : { modelConfig }),
@@ -305,6 +330,7 @@ interface ParsedContinueBody {
   fromChapter?: number;
   additionalChapters?: number;
   chapterCount?: number;
+  reviewEnabled?: boolean;
   fake?: boolean;
   modelConfig?: ModelConfigInput;
 }
@@ -322,6 +348,7 @@ function parseContinueBody(value: unknown): ParsedContinueBody {
   const fromChapter = optionalInteger(value, "fromChapter");
   const additionalChapters = optionalInteger(value, "additionalChapters");
   const chapterCount = optionalInteger(value, "chapterCount");
+  const reviewEnabled = optionalBoolean(value, "reviewEnabled");
 
   if (fromChapter !== undefined && additionalChapters !== undefined) {
     throw new RequestError(
@@ -354,6 +381,7 @@ function parseContinueBody(value: unknown): ParsedContinueBody {
     ...(fromChapter === undefined ? {} : { fromChapter }),
     ...(additionalChapters === undefined ? {} : { additionalChapters }),
     ...(chapterCount === undefined ? {} : { chapterCount }),
+    ...(reviewEnabled === undefined ? {} : { reviewEnabled }),
     ...(fake === undefined ? {} : { fake }),
     ...(modelConfig === undefined ? {} : { modelConfig }),
   };
@@ -790,6 +818,58 @@ async function resolveGateway(
   return createRealGateway();
 }
 
+async function resolveDirectorSessionFactory(
+  context: ServerContext,
+  fakeOption: boolean | undefined,
+  requestedConfig: ModelConfigInput | undefined,
+): Promise<DirectorSessionFactory | undefined> {
+  if (context.directorSessionFactory) return context.directorSessionFactory;
+
+  const useFake = fakeOption ?? context.fakeDefault;
+  if (useFake || context.gatewayFactory) return undefined;
+
+  let modelConfig = requestedConfig;
+  if (!modelConfig) {
+    let stored: StoredSettings | undefined;
+    try {
+      stored = await context.settings.read();
+    } catch (error) {
+      logServerError(error);
+      throw new RequestError(500, INTERNAL_ERROR);
+    }
+
+    if (isCompleteSettings(stored)) {
+      modelConfig = {
+        protocol: stored.protocol,
+        model: stored.model,
+        baseUrl: stored.baseUrl,
+        ...(stored.apiKey === undefined ? {} : { apiKey: stored.apiKey }),
+      };
+    }
+  }
+
+  const agentDir = resolve(
+    process.env.NOVELBUILDER_AGENT_DIR?.trim() || ".agent",
+  );
+  if (modelConfig) {
+    const handle = await createDirectorModelHandle(modelConfig, agentDir);
+    return {
+      ...createPiDirectorSessionFactory(handle.config),
+      cleanup: handle.cleanup,
+    };
+  }
+
+  if (!hasEnvModelConfig()) {
+    throw new RequestError(
+      400,
+      "未配置模型。请先在全局设置中填写模型配置。",
+      "model_not_configured",
+    );
+  }
+  const handle = createEnvDirectorModelHandle();
+  return createPiDirectorSessionFactory(handle.config);
+}
+
 async function handleCreateProject(
   req: IncomingMessage,
   res: ServerResponse,
@@ -876,9 +956,11 @@ async function executeContinuationRun(
     fromChapter?: number;
     additionalChapters?: number;
     chapterCount?: number;
+    reviewEnabled?: boolean;
     ai: AiGateway;
     store: ProjectStore;
     graph: NovelGraphStore;
+    directorSessionFactory?: DirectorSessionFactory;
   },
 ): Promise<void> {
   try {
@@ -893,15 +975,26 @@ async function executeContinuationRun(
       ...(input.chapterCount === undefined
         ? {}
         : { chapterCount: input.chapterCount }),
+      ...(input.reviewEnabled === undefined
+        ? {}
+        : { reviewEnabled: input.reviewEnabled }),
       ai: input.ai,
       store: input.store,
       graph: input.graph,
+      ...(input.directorSessionFactory === undefined
+        ? {}
+        : { directorSessionFactory: input.directorSessionFactory }),
       signal: run.controller.signal,
       onProgress: (event) => pushEvent(run, event),
     });
     finalizeRun(run, "completed");
   } catch (error) {
     finalizeRun(run, "failed", errorMessage(error));
+  } finally {
+    const cleanup = input.directorSessionFactory?.cleanup;
+    if (cleanup) {
+      await cleanup.call(input.directorSessionFactory).catch(() => undefined);
+    }
   }
 }
 
@@ -1031,8 +1124,14 @@ async function handleContinueProject(
   }
 
   let ai: AiGateway;
+  let directorSessionFactory: DirectorSessionFactory | undefined;
   try {
     ai = await resolveGateway(context, project, parsed.fake, parsed.modelConfig);
+    directorSessionFactory = await resolveDirectorSessionFactory(
+      context,
+      parsed.fake,
+      parsed.modelConfig,
+    );
   } catch (error) {
     if (error instanceof RequestError) {
       sendJson(res, error.status, {
@@ -1077,9 +1176,15 @@ async function handleContinueProject(
     ...(parsed.chapterCount === undefined
       ? {}
       : { chapterCount: parsed.chapterCount }),
+    ...(parsed.reviewEnabled === undefined
+      ? {}
+      : { reviewEnabled: parsed.reviewEnabled }),
     ai,
     store: context.store,
     graph: context.graph,
+    ...(directorSessionFactory === undefined
+      ? {}
+      : { directorSessionFactory }),
   });
 }
 
@@ -1307,13 +1412,143 @@ async function handleGetToc(
   });
 }
 
+async function handleGetPromptLog(
+  res: ServerResponse,
+  projectId: string,
+  url: URL,
+  context: ServerContext,
+): Promise<void> {
+  let project: Project | undefined;
+  try {
+    project = await context.store.getProject(projectId);
+  } catch (error) {
+    logServerError(error);
+    sendInternalError(res);
+    return;
+  }
+
+  if (!project) {
+    sendJson(res, 404, { error: "Project not found." });
+    return;
+  }
+
+  const rawChapter = url.searchParams.get("chapterNumber");
+  let chapterNumber: number | undefined;
+  if (rawChapter !== null) {
+    const parsed = Number.parseInt(rawChapter, 10);
+    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+      sendJson(res, 400, { error: "Invalid chapter number." });
+      return;
+    }
+    chapterNumber = parsed;
+  }
+
+  const rawLimit = url.searchParams.get("limit");
+  const parsedLimit = rawLimit === null ? 50 : Number.parseInt(rawLimit, 10);
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(500, Math.max(1, parsedLimit))
+    : 50;
+
+  try {
+    const result = await readPromptLog(context.store, projectId, {
+      ...(chapterNumber === undefined ? {} : { chapterNumber }),
+      limit,
+    });
+    sendJson(res, 200, {
+      projectId,
+      chapterNumber: chapterNumber ?? null,
+      total: result.total,
+      entries: result.entries,
+    });
+  } catch (error) {
+    logServerError(error);
+    sendInternalError(res);
+  }
+}
+
+async function handleGetForeshadows(
+  res: ServerResponse,
+  projectId: string,
+  url: URL,
+  context: ServerContext,
+): Promise<void> {
+  let project: Project | undefined;
+  try {
+    project = await context.store.getProject(projectId);
+  } catch (error) {
+    logServerError(error);
+    sendInternalError(res);
+    return;
+  }
+
+  if (!project) {
+    sendJson(res, 404, { error: "Project not found." });
+    return;
+  }
+
+  const rawChapter = url.searchParams.get("chapterNumber");
+  let chapterNumber: number | undefined;
+  if (rawChapter !== null) {
+    const parsed = Number.parseInt(rawChapter, 10);
+    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+      sendJson(res, 400, { error: "Invalid chapter number." });
+      return;
+    }
+    chapterNumber = parsed;
+  }
+
+  const projectDir = context.store.getProjectDir(projectId);
+  if (projectDir === undefined || !existsSync(join(projectDir, "story.db"))) {
+    sendJson(res, 200, {
+      projectId,
+      chapterNumber: chapterNumber ?? null,
+      available: false,
+      records: [],
+      counts: { total: 0, open: 0, resolved: 0, abandoned: 0 },
+    });
+    return;
+  }
+
+  const foreshadows = openForeshadowStore(context.store, projectId);
+  try {
+    const records =
+      chapterNumber === undefined
+        ? foreshadows.list(projectId)
+        : foreshadows.listForChapter(projectId, chapterNumber);
+    const open = records.filter(
+      (record) =>
+        record.status === "planned" ||
+        record.status === "open" ||
+        record.status === "progressed",
+    ).length;
+    const resolved = records.filter(
+      (record) => record.status === "resolved",
+    ).length;
+    const abandoned = records.filter(
+      (record) => record.status === "abandoned",
+    ).length;
+
+    sendJson(res, 200, {
+      projectId,
+      chapterNumber: chapterNumber ?? null,
+      available: true,
+      records,
+      counts: { total: records.length, open, resolved, abandoned },
+    });
+  } catch (error) {
+    logServerError(error);
+    sendInternalError(res);
+  } finally {
+    foreshadows.close();
+  }
+}
+
 async function handleGetChapter(
   res: ServerResponse,
   projectId: string,
   chapterNumber: number,
   context: ServerContext,
-): Promise<void> {
-  let project: Project | undefined;
+): Promise<void> {  let project: Project | undefined;
   try {
     project = await context.store.getProject(projectId);
   } catch (error) {
@@ -1764,6 +1999,30 @@ async function handleRequest(
     return;
   }
 
+  const promptLogMatch = /^\/api\/projects\/([^/]+)\/prompt-log$/.exec(
+    pathname,
+  );
+  if (promptLogMatch) {
+    if (method !== "GET") {
+      sendMethodNotAllowed(res, ["GET"]);
+      return;
+    }
+    await handleGetPromptLog(res, promptLogMatch[1]!, url, context);
+    return;
+  }
+
+  const foreshadowMatch = /^\/api\/projects\/([^/]+)\/foreshadows$/.exec(
+    pathname,
+  );
+  if (foreshadowMatch) {
+    if (method !== "GET") {
+      sendMethodNotAllowed(res, ["GET"]);
+      return;
+    }
+    await handleGetForeshadows(res, foreshadowMatch[1]!, url, context);
+    return;
+  }
+
   const projectMatch = /^\/api\/projects\/([^/]+)(?:\/(manuscript|chapters|toc|graph))?$/.exec(
     pathname,
   );
@@ -1854,6 +2113,9 @@ export async function startServer(
     ...(options.gatewayFactory === undefined
       ? {}
       : { gatewayFactory: options.gatewayFactory }),
+    ...(options.directorSessionFactory === undefined
+      ? {}
+      : { directorSessionFactory: options.directorSessionFactory }),
   };
 
   const server = createServer((req, res) => {

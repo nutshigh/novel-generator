@@ -11,6 +11,7 @@ export interface CreateStoryProjectInput {
   targetWords?: number;
   chapterWords?: number;
   maxChapters?: number;
+  reviewEnabled?: boolean;
 }
 
 const DEFAULT_LANGUAGE = "简体中文";
@@ -43,6 +44,7 @@ export function createProject(input: CreateStoryProjectInput): Project {
     targetWords,
     chapterWords,
     maxChapters,
+    reviewEnabled: input.reviewEnabled ?? false,
     status: "draft",
     createdAt: new Date().toISOString(),
   });

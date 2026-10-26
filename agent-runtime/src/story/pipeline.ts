@@ -15,15 +15,22 @@ import {
   PipelineError,
   errorMessage,
   initialStoryState,
-  runChapterRange,
   throwIfAborted,
 } from "./chapterRunner.js";
+import {
+  runDirectorRange,
+  type DirectorSessionFactory,
+} from "./director.js";
 import {
   assembleManuscript,
   saveBookArtifacts,
   type Manuscript,
 } from "./export.js";
 import { flattenChapters } from "./outline.js";
+import {
+  PromptLogWriter,
+  withPromptLogging,
+} from "./promptLog.js";
 import { generateStorySetup } from "./setup.js";
 import { smoothChapterBoundaries } from "./smoothing.js";
 
@@ -58,6 +65,8 @@ export interface RunNovelPipelineInput {
   ai: AiGateway;
   store: ProjectStore;
   graph?: NovelGraphStore;
+  directorSessionFactory?: DirectorSessionFactory;
+  reviewEnabled?: boolean;
   onProgress?: (event: RunProgress) => void;
   signal?: AbortSignal;
 }
@@ -88,6 +97,8 @@ export async function runSetupPipeline(
   const emit = (event: RunProgress): void => {
     onProgress?.(event);
   };
+  const promptLog = new PromptLogWriter(store, project.id);
+  const loggedAi = withPromptLogging(ai, promptLog);
 
   const runningProject: Project = { ...project, status: "running" };
   await store.saveProject(runningProject);
@@ -98,7 +109,7 @@ export async function runSetupPipeline(
     throwIfAborted(signal);
     emit({ phase: "setup", message: "正在准备故事圣经与章节大纲。" });
 
-    const setup = await generateStorySetup(currentProject, ai, store, {
+    const setup = await generateStorySetup(currentProject, loggedAi, store, {
       signal,
       onStep: (step) => {
         if (step.status === "start") activeStep = step.step;
@@ -196,8 +207,14 @@ export async function runNovelPipeline(
   const emit = (event: RunProgress): void => {
     onProgress?.(event);
   };
+  const promptLog = new PromptLogWriter(store, project.id);
+  const loggedAi = withPromptLogging(ai, promptLog);
+  const configuredProject: Project =
+    input.reviewEnabled === undefined
+      ? project
+      : { ...project, reviewEnabled: input.reviewEnabled };
 
-  const runningProject: Project = { ...project, status: "running" };
+  const runningProject: Project = { ...configuredProject, status: "running" };
   await store.saveProject(runningProject);
   let currentProject = runningProject;
   let activeStep: "bible" | "outline" = "bible";
@@ -206,7 +223,7 @@ export async function runNovelPipeline(
     throwIfAborted(signal);
     emit({ phase: "setup", message: "正在准备故事圣经与章节大纲。" });
 
-    const setup = await generateStorySetup(currentProject, ai, store, {
+    const setup = await generateStorySetup(currentProject, loggedAi, store, {
       signal,
       onStep: (step) => {
         if (step.status === "start") activeStep = step.step;
@@ -260,16 +277,20 @@ export async function runNovelPipeline(
     });
 
     const state: StoryState = initialStoryState(setup.bible);
-    const range = await runChapterRange({
+    const range = await runDirectorRange({
       project: setup.project,
       bible: setup.bible,
       outline: setup.outline,
-      ai,
+      ai: loggedAi,
       store,
       chapters: [],
       state,
       startChapterNumber: 1,
       ...(graph ? { graph } : {}),
+      ...(input.directorSessionFactory === undefined
+        ? {}
+        : { sessionFactory: input.directorSessionFactory }),
+      promptLogger: promptLog,
       signal,
       emit,
     });
@@ -284,7 +305,7 @@ export async function runNovelPipeline(
         toChapter: chapter.number,
       }));
 
-    if (boundaries.length > 0) {
+    if (boundaries.length > 0 && setup.project.reviewEnabled) {
       emit({
         phase: "continuity",
         message: `正在检查 ${boundaries.length} 处章节接缝…`,
@@ -296,7 +317,7 @@ export async function runNovelPipeline(
           outline: setup.outline,
           chapters,
           boundaries,
-          ai,
+          ai: loggedAi,
           store,
           ...(signal === undefined ? {} : { signal }),
           emit,

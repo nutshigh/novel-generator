@@ -1,6 +1,8 @@
+import type { ForeshadowRecord } from "../domain/foreshadowStore.js";
 import type {
   BoundaryAudit,
   Chapter,
+  ChapterSummary,
   Character,
   ForeshadowLedgerEntry,
   Outline,
@@ -13,6 +15,7 @@ import type {
 } from "../domain/schemas.js";
 import {
   buildChapterContext,
+  chapterHeading,
   type ChapterContextInput,
 } from "../story/context.js";
 import {
@@ -22,6 +25,7 @@ import {
 import { loadSkill } from "./skills.js";
 
 const NOVEL_WRITING_SKILL = loadSkill("novel-writing");
+const STORY_RECALL_SKILL = loadSkill("story-recall");
 
 export const BIBLE_SYSTEM_PROMPT = `你是资深长篇网络小说策划，擅长把一句话前提扩展成可连续创作数十万字的故事圣经。
 
@@ -70,6 +74,49 @@ export const CHAPTER_SYSTEM_PROMPT = `你是擅长长篇连载的网络小说正
 10. 最后一场戏必须完成动作—反应：人物拨号、发问、推门、按下按钮或提出请求之后，必须写出结果、回应或明确中断，不能停在人物刚开口的位置。
 
 ${NOVEL_WRITING_SKILL}`;
+
+export const DIRECTOR_SYSTEM_PROMPT = `你是长篇连载网络小说的作者兼本章导演。你直接写正文，不写分析、计划、大纲或创作说明。
+
+工作方式：
+1. 你会收到本章大纲、目标字数、cast、风格指南、上一章全文、最近 8 章逐章摘要、更早章节滚动摘要和伏笔账本。上下文按“全文 > 逐章摘要 > 滚动摘要”压缩，除上一章外都不是全文。
+2. 写之前先判断信息是否足够。摘要只是索引，不要凭摘要臆测细节。需要更早章节时按层级检索：
+   - 先用 story_recall(level="rolling") 定位大致时间段；
+   - 再用 story_recall(level="chapter") 展开逐章摘要，确认事件与钩子；
+   - 涉及精确对话、动作、数字、承诺、物件或伏笔原文时，必须用 chapter_read 核对；
+   - 需要章节核心设定、人物状态、关系变化、伏笔动作用 story_digest；需要关系时间线、地点、物品、概念、事件、伏笔连线用 story_graph。
+3. 本章要推进、回收或呼应伏笔时，先看伏笔账本的设置章节，按上述顺序回查；本章要承接旧钩子时，必须读对应章节原文，不得只凭摘要补写。
+4. 检索范围只能到当前章之前的章节，不得读取当前章旧稿或未来章节。
+5. 需要主动调整伏笔时调用 foreshadow_update；正常正文中已经发生的伏笔变化由系统自动提取，不必重复记录。
+6. 直接写本章正文，写完必须调用 chapter_commit 提交。不要把正文作为普通回复输出。
+7. 如果 chapter_commit 返回 needs_attention，说明字数不足；继续写并用 chapter_commit 的 append=true 补交。
+8. 不修改大纲，不跳过章节，不发明 cast 之外的有名字角色。
+
+正文要求：
+- 必须完成本章大纲的 goal、conflict、turn、reveal 和 hook，不得越过本章边界。
+- 本章 goal 必须在章末前有明确结果，不能只停在“决定去做”。
+- 大纲 hook 必须是全章最后一个节拍；hook 出现后不得另起新场景。
+- 最后一场戏必须完成动作—反应，最后一句必须是完整句子。
+- 遵守风格指南、禁用表达和 AI 味黑名单；段落和句子长短要有变化。
+- 上一章全文是硬事实；摘要与全文冲突时以全文为准。
+
+${STORY_RECALL_SKILL}`;
+
+export const CHAPTER_MEMORY_SYSTEM_PROMPT = `你是长篇连载的资料编辑，负责为每一章建立可检索档案、逐章摘要和滚动摘要。
+
+任务：只根据给出的章节正文和已有档案，输出一个 JSON 对象。
+
+硬性要求：
+1. 只输出一个合法 JSON 对象，不要 Markdown 代码围栏、解释或额外文字。
+2. JSON 必须符合 ChapterMemory schema：{ digest, brief, summary }。
+3. digest.coreSettings 只记录本章出现或强化的世界规则、力量体系、地点、物品、概念、阵营；写清本章新增的信息、代价或限制。
+4. digest.characters 只记录本章出场的有名字人物，写清其本章目标、行动和状态变化。
+5. digest.plotNodes 按发生顺序记录 3–8 个情节节点，每个节点写清后果或影响。
+6. digest.relationshipProgress 只记录本章发生变化的双向关系，写清变化和原因。
+7. digest.foreshadows 只记录本章涉及伏笔的动作：setup、progress、payoff 或 mention。
+8. brief 必须是 2–3 句话，只概括本章：核心事件、人物选择或结果、章末钩子；不得混入其他章节，不得剧透未来章节，不得写成评价。
+9. summary.text 必须是 3–4 句话，覆盖 summary.fromChapter 到 summary.toChapter，只写已经发生的事实，不评价、不剧透、不补写。
+10. 无法确认的信息不要写入；没有内容时使用空数组。
+11. 使用简体中文。`;
 
 const REVIEW_WRITING_AUDIT = `审核时额外按以下写作标准检查：
 1. 章节完整性：本章是否有目标、阻力、转折、收束和钩子；是否在场景中途突然结束。
@@ -654,7 +701,119 @@ export function buildChapterUserPrompt(input: ChapterPromptInput): string {
 - 结尾先收住本章冲突，再抛具体钩子；最后一句必须是完整句子。
 - 最后一场戏必须完成动作—反应：拨号、发问、推门、按下按钮或提出请求之后，必须写出结果、回应或明确中断，不能停在人物刚开口的位置。
 - 段落长短不一，句子长短交替；禁止 AI 套词、连续比喻、总结式或升华式结尾。
-- 与上一章结尾、当前状态和本章大纲保持一致；不得新增有名字的角色。`;
+- 与上一章全文、当前状态和本章大纲保持一致；不得新增有名字的角色。
+- 上一章已经写明的数字、时间、人物状态和承诺都是硬事实，不得改写、重新计算或凭空补全。`;
+}
+
+export function buildDirectorChapterUserPrompt(
+  input: ChapterContextInput,
+): string {
+  return `${buildChapterContext(input)}
+
+本章写作任务：
+1. 你是本章作者，直接写正文。上下文按“上一章全文 > 最近 8 章逐章摘要 > 更早章节滚动摘要”提供；摘要只是索引，不能当作完整事实。需要更早章节时，先用 story_recall(level="rolling") 定位，再用 story_recall(level="chapter") 展开；涉及精确对话、动作、数字、承诺、物件或伏笔原文时，必须用 chapter_read 核对。需要结构化档案用 story_digest，需要关系/地点/物品/事件/伏笔连线用 story_graph。
+2. 写完正文后调用 chapter_commit({ chapterNumber: ${input.outlineChapter.number}, text: "本章完整正文" })。
+3. 不要在普通回复里输出正文；正文只放在 chapter_commit 的 text 参数里。
+4. 如果 chapter_commit 返回 needs_attention，继续补写，并用 append=true 再次提交。
+5. 正文只写故事本身，不要标题、章节号、Markdown、解释或创作说明。
+
+本章必须完成的节拍：
+- goal: ${input.outlineChapter.goal}
+- conflict: ${input.outlineChapter.conflict}
+- turn: ${input.outlineChapter.turn}
+- reveal: ${input.outlineChapter.reveal}
+- hook: ${input.outlineChapter.hook}
+
+硬约束：
+- 只能使用 cast 中的人物，不得临时新增有名字的角色。
+- 不得写下一章才发生的事件，不得提前揭示下一章信息。
+- 本章 goal 必须在章末前落地；最后一场戏必须完成动作—反应。
+- 目标字数 ${input.targetWords} 字，允许略多，但不要注水。
+- 与上一章全文、逐章摘要、滚动摘要、伏笔账本和当前状态保持一致；摘要与全文冲突时以全文为准。
+- 伏笔和钩子的具体原文必须来自 story_recall / chapter_read 的检索结果，不得只凭摘要补写。`;
+}
+
+export interface ChapterMemoryPromptInput {
+  chapter: Chapter;
+  previousChapters: readonly Chapter[];
+  foreshadows: readonly ForeshadowRecord[];
+  fromChapter: number;
+  toChapter: number;
+}
+
+function formatMemoryChapter(chapter: Chapter): string {
+  if (chapter.digest) {
+    const settings = chapter.digest.coreSettings
+      .map((entry) => `${entry.name}（${entry.type}）：${entry.detail}`)
+      .join("；");
+    const characters = chapter.digest.characters
+      .map(
+        (entry) =>
+          `${entry.name}｜${entry.roleInChapter}｜目标=${entry.goal}｜变化=${entry.change}`,
+      )
+      .join("；");
+    const nodes = chapter.digest.plotNodes
+      .map((entry, index) => `${index + 1}. ${entry.summary}（${entry.impact}）`)
+      .join("；");
+    return `【${chapterHeading(chapter)}｜已有档案】\n核心设定：${settings || "（无）"}\n人物：${characters || "（无）"}\n情节：${nodes || "（无）"}`;
+  }
+
+  return `【${chapterHeading(chapter)}｜正文】\n${chapter.text}`;
+}
+
+function formatMemoryForeshadows(
+  foreshadows: readonly ForeshadowRecord[],
+): string {
+  if (foreshadows.length === 0) return "（无）";
+  return foreshadows
+    .map(
+      (entry) =>
+        `- ${entry.title}｜设置=第${entry.setupChapter}章｜计划回收=${
+          entry.plannedPayoffChapter === undefined
+            ? "未定"
+            : `第${entry.plannedPayoffChapter}章`
+        }｜status=${entry.status}${entry.note ? `｜note=${entry.note}` : ""}`,
+    )
+    .join("\n");
+}
+
+export function buildChapterMemoryUserPrompt(
+  input: ChapterMemoryPromptInput,
+): string {
+  const previous = input.previousChapters.map(formatMemoryChapter).join("\n\n");
+
+  return `请为下面的章节建立档案、逐章摘要和滚动摘要。
+
+CHAPTER_NUMBER=${input.chapter.number}
+TITLE=${input.chapter.title}
+SUMMARY_FROM=${input.fromChapter}
+SUMMARY_TO=${input.toChapter}
+
+本章最终正文：
+${input.chapter.text}
+
+最近章节资料（用于生成 5 章滚动摘要）：
+${previous || "（无）"}
+
+当前伏笔账本：
+${formatMemoryForeshadows(input.foreshadows)}
+
+请只输出一个合法 JSON 对象，结构如下：
+{
+  "brief": "2-3句话，只概括本章核心事件、结果和章末钩子",
+  "digest": {
+    "coreSettings": [{ "type": "world|power|location|item|concept|faction", "name": "", "detail": "" }],
+    "characters": [{ "name": "", "roleInChapter": "", "goal": "", "change": "" }],
+    "plotNodes": [{ "summary": "", "impact": "" }],
+    "relationshipProgress": [{ "source": "", "target": "", "change": "", "reason": "" }],
+    "foreshadows": [{ "title": "", "action": "setup|progress|payoff|mention", "note": "" }]
+  },
+  "summary": {
+    "fromChapter": ${input.fromChapter},
+    "toChapter": ${input.toChapter},
+    "text": "3-4句话"
+  }
+}`;
 }
 
 function formatReviewIssue(issue: ReviewIssue, index: number): string {

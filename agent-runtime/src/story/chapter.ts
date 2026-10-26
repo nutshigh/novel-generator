@@ -25,9 +25,12 @@ import {
   buildReviewUserPrompt,
   buildReviseUserPrompt,
 } from "../prompts/defaults.js";
+import type { ForeshadowRecord } from "../domain/foreshadowStore.js";
 import {
   previousTail,
   selectCast,
+  type ChapterBriefBlock,
+  type ChapterSummaryBlock,
   type ForeshadowContextEntry,
 } from "./context.js";
 import { flattenChapters } from "./outline.js";
@@ -47,6 +50,10 @@ export interface WriteChapterInput {
   chapter: OutlineChapter;
   ai: AiGateway;
   previousChapterText?: string;
+  recentChapters?: Chapter[];
+  chapterBriefs?: ChapterBriefBlock[];
+  summaries?: ChapterSummaryBlock[];
+  foreshadowLedger?: ForeshadowRecord[];
   state: StoryState;
   graphContext?: string;
   signal?: AbortSignal;
@@ -135,6 +142,10 @@ export async function writeChapter(input: WriteChapterInput): Promise<Chapter> {
     chapter,
     ai,
     previousChapterText,
+    recentChapters,
+    chapterBriefs,
+    summaries,
+    foreshadowLedger,
     state,
     graphContext,
     signal,
@@ -151,6 +162,10 @@ export async function writeChapter(input: WriteChapterInput): Promise<Chapter> {
     outlineChapter: chapter,
     nextOutlineChapter,
     previousChapterText,
+    ...(recentChapters === undefined ? {} : { recentChapters }),
+    ...(chapterBriefs === undefined ? {} : { chapterBriefs }),
+    ...(summaries === undefined ? {} : { summaries }),
+    ...(foreshadowLedger === undefined ? {} : { foreshadowLedger }),
     cast,
     state,
     foreshadow: openForeshadows(bible, state),
@@ -273,6 +288,10 @@ export interface FinishChapterInput {
   chapter: Chapter;
   ai: AiGateway;
   previousChapterText?: string;
+  recentChapters?: Chapter[];
+  chapterBriefs?: ChapterBriefBlock[];
+  summaries?: ChapterSummaryBlock[];
+  foreshadowLedger?: ForeshadowRecord[];
   state: StoryState;
   graphContext?: string;
   reason: string;
@@ -294,6 +313,10 @@ export async function finishChapter(
     chapter,
     ai,
     previousChapterText,
+    recentChapters,
+    chapterBriefs,
+    summaries,
+    foreshadowLedger,
     state,
     graphContext,
     signal,
@@ -314,6 +337,10 @@ export async function finishChapter(
     outlineChapter,
     nextOutlineChapter,
     previousChapterText,
+    ...(recentChapters === undefined ? {} : { recentChapters }),
+    ...(chapterBriefs === undefined ? {} : { chapterBriefs }),
+    ...(summaries === undefined ? {} : { summaries }),
+    ...(foreshadowLedger === undefined ? {} : { foreshadowLedger }),
     cast,
     state,
     foreshadow: openForeshadows(bible, state),

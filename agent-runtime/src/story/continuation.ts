@@ -15,9 +15,12 @@ import {
   PipelineError,
   errorMessage,
   initialStoryState,
-  runChapterRange,
   throwIfAborted,
 } from "./chapterRunner.js";
+import {
+  runDirectorRange,
+  type DirectorSessionFactory,
+} from "./director.js";
 import {
   assembleManuscript,
   saveBookArtifacts,
@@ -28,6 +31,10 @@ import {
   loadStoredChapters,
 } from "./library.js";
 import { extendOutline } from "./outlineExtension.js";
+import {
+  PromptLogWriter,
+  withPromptLogging,
+} from "./promptLog.js";
 import { loadStorySetup } from "./setup.js";
 import { smoothChapterBoundaries } from "./smoothing.js";
 
@@ -39,6 +46,8 @@ export interface ContinueNovelInput {
   ai: AiGateway;
   store: ProjectStore;
   graph?: NovelGraphStore;
+  directorSessionFactory?: DirectorSessionFactory;
+  reviewEnabled?: boolean;
   onProgress?: (event: RunProgress) => void;
   signal?: AbortSignal;
 }
@@ -176,6 +185,8 @@ export async function continueNovel(
   const emit = (event: RunProgress): void => {
     onProgress?.(event);
   };
+  const promptLog = new PromptLogWriter(store, projectId);
+  const loggedAi = withPromptLogging(ai, promptLog);
 
   emit({ phase: "resume", message: "正在读取项目、大纲与既有章节…" });
 
@@ -195,7 +206,10 @@ export async function continueNovel(
     );
   }
 
-  let project = setup.project;
+  let project =
+    input.reviewEnabled === undefined
+      ? setup.project
+      : { ...setup.project, reviewEnabled: input.reviewEnabled };
   let outline = setup.outline;
   let bible = setup.bible;
   const outlineChapters = flattenOutlineChapters(outline);
@@ -241,7 +255,7 @@ export async function continueNovel(
       chapters,
       additionalChapters,
       state: lastChapter?.stateSnapshot,
-      ai,
+      ai: loggedAi,
       signal,
       onAttempt: (attempt, maxAttempts) => {
         emit({
@@ -282,7 +296,7 @@ export async function continueNovel(
           project,
           bible,
           outline,
-          chapters,
+          chapters: chapters.filter((chapter) => chapter.number < startChapter),
         }),
       );
       emit({ phase: "graph", message: "知识图谱已同步。" });
@@ -328,17 +342,21 @@ export async function continueNovel(
       chapterNumber: startChapter,
     });
 
-    const result = await runChapterRange({
+    const result = await runDirectorRange({
       project,
       bible,
       outline,
-      ai,
+      ai: loggedAi,
       store,
       chapters,
       state: resolved.state,
       startChapterNumber: startChapter,
       endChapterNumber: endChapter,
       ...(graph ? { graph } : {}),
+      ...(input.directorSessionFactory === undefined
+        ? {}
+        : { sessionFactory: input.directorSessionFactory }),
+      promptLogger: promptLog,
       signal,
       emit,
     });
@@ -356,7 +374,7 @@ export async function continueNovel(
       boundaries.push({ fromChapter: number, toChapter: number + 1 });
     }
 
-    if (boundaries.length > 0) {
+    if (boundaries.length > 0 && project.reviewEnabled) {
       emit({
         phase: "continuity",
         message: `正在检查 ${boundaries.length} 处章节接缝…`,
@@ -368,7 +386,7 @@ export async function continueNovel(
           outline,
           chapters,
           boundaries,
-          ai,
+          ai: loggedAi,
           store,
           ...(signal === undefined ? {} : { signal }),
           emit,

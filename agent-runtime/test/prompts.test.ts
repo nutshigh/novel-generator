@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   BIBLE_SYSTEM_PROMPT,
+  CHAPTER_MEMORY_SYSTEM_PROMPT,
   CHAPTER_SYSTEM_PROMPT,
+  DIRECTOR_SYSTEM_PROMPT,
   OUTLINE_SYSTEM_PROMPT,
   REVIEW_SYSTEM_PROMPT,
   REVISE_SYSTEM_PROMPT,
@@ -63,6 +65,16 @@ describe("prompt constants", () => {
     expect(REVIEW_SYSTEM_PROMPT).toContain("动作—反应");
     expect(REVISE_SYSTEM_PROMPT).toContain("不得删减或压缩结尾");
     expect(OUTLINE_SYSTEM_PROMPT).toContain("最后一拍");
+  });
+
+  it("teaches the director to search memory from rolling to brief to full text", () => {
+    expect(DIRECTOR_SYSTEM_PROMPT).toContain("滚动摘要");
+    expect(DIRECTOR_SYSTEM_PROMPT).toContain("逐章摘要");
+    expect(DIRECTOR_SYSTEM_PROMPT).toContain("story_recall");
+    expect(DIRECTOR_SYSTEM_PROMPT).toContain("chapter_read");
+    expect(DIRECTOR_SYSTEM_PROMPT).toContain("上一章全文是硬事实");
+    expect(CHAPTER_MEMORY_SYSTEM_PROMPT).toContain("brief");
+    expect(CHAPTER_MEMORY_SYSTEM_PROMPT).toContain("2–3 句话");
   });
 
   it("defers language to the project setting instead of hard-coding Chinese", () => {
@@ -372,7 +384,8 @@ describe("chapter-side prompt builders", () => {
     expect(prompt).toContain("下一章");
     expect(prompt).toContain(nextOutlineChapter.summary);
     expect(prompt).not.toContain(nextOutlineChapter.reveal);
-    expect(prompt).toContain("上一章结尾");
+    expect(prompt).toContain("上一章全文");
+    expect(prompt).toContain(previousChapterText);
     expect(prompt).toContain("旧城石阶");
     expect(prompt).toContain("地脉印的裂纹");
     expect(prompt).toContain("林砚");

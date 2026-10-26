@@ -1,3 +1,6 @@
 .cache
 .qoder
 .superpowers
+*.db
+*.db-wal
+*.db-shm

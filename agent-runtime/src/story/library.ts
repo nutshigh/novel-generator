@@ -34,6 +34,13 @@ export interface TocChapter {
   number: number;
   title: string;
   summary: string;
+  pov: string;
+  cast: string[];
+  goal: string;
+  conflict: string;
+  turn: string;
+  reveal: string;
+  hook: string;
   targetWords: number;
   status: TocChapterStatus;
   wordCount: number;
@@ -215,7 +222,8 @@ async function readOutline(
 }
 
 function chapterStatus(chapter: Chapter): TocChapterStatus {
-  if (chapter.status === "needs_attention" || chapter.review?.gate !== "pass") {
+  if (chapter.status === "needs_attention") return "needs_attention";
+  if (chapter.review !== undefined && chapter.review.gate !== "pass") {
     return "needs_attention";
   }
   return chapter.text.trim().length > 0 ? "written" : "missing";
@@ -230,6 +238,13 @@ function summarizeChapter(
       number: outlineChapter.number,
       title: outlineChapter.title,
       summary: outlineChapter.summary,
+      pov: outlineChapter.pov,
+      cast: outlineChapter.cast,
+      goal: outlineChapter.goal,
+      conflict: outlineChapter.conflict,
+      turn: outlineChapter.turn,
+      reveal: outlineChapter.reveal,
+      hook: outlineChapter.hook,
       targetWords: outlineChapter.targetWords,
       status: "missing",
       wordCount: 0,
@@ -241,6 +256,13 @@ function summarizeChapter(
     number: outlineChapter.number,
     title: stored.title || outlineChapter.title,
     summary: outlineChapter.summary,
+    pov: outlineChapter.pov,
+    cast: outlineChapter.cast,
+    goal: outlineChapter.goal,
+    conflict: outlineChapter.conflict,
+    turn: outlineChapter.turn,
+    reveal: outlineChapter.reveal,
+    hook: outlineChapter.hook,
     targetWords: outlineChapter.targetWords,
     status: chapterStatus(stored),
     wordCount: stored.wordCount,

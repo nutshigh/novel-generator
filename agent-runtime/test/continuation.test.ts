@@ -164,7 +164,10 @@ describe("continueNovel", () => {
         markerNumber(request.user, "CHAPTER_NUMBER") === 3,
     );
     expect(chapterRequest).toBeDefined();
-    expect(chapterRequest!.user).toContain("上一章结尾");
+    expect(chapterRequest!.user).toContain("上一章全文");
+    expect(chapterRequest!.user).toContain(
+      Array.from(chapterTwo.text).slice(0, 20).join(""),
+    );
     expect(chapterRequest!.user).toContain(
       Array.from(chapterTwo.text).slice(-20).join(""),
     );

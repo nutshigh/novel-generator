@@ -18,7 +18,7 @@ export interface CustomModelConfig extends ModelConfigInput {
   agentDir: string;
 }
 
-const UI_PROVIDER = "novelbuilder-ui";
+export const UI_PROVIDER = "novelbuilder-ui";
 /**
  * Permissive context ceiling for UI-configured models. The provider still
  * enforces its real limits; this only prevents the pi SDK from clamping the
@@ -38,7 +38,7 @@ export function modelApiForProtocol(
   return PROTOCOL_APIS[protocol];
 }
 
-interface NormalizedModelConfig {
+export interface NormalizedModelConfig {
   api: "openai-completions" | "anthropic-messages";
   baseUrl: string;
   model: string;
@@ -177,7 +177,7 @@ export async function createPiGateway(
   return gateway;
 }
 
-function normalizeModelConfig(config: ModelConfigInput): NormalizedModelConfig {
+export function normalizeModelConfig(config: ModelConfigInput): NormalizedModelConfig {
   const protocol = config.protocol;
   if (protocol !== "openai" && protocol !== "anthropic") {
     throw new Error('protocol must be either "openai" or "anthropic".');

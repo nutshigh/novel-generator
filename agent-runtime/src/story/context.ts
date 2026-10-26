@@ -1,7 +1,11 @@
+import type { ForeshadowRecord } from "../domain/foreshadowStore.js";
 import type {
+  Chapter,
+  ChapterSummary,
   Character,
   ForeshadowLedgerEntry,
   ForeshadowState,
+  Outline,
   OutlineChapter,
   Project,
   StoryBible,
@@ -10,12 +14,31 @@ import type {
 
 export type ForeshadowContextEntry = ForeshadowLedgerEntry | ForeshadowState;
 
+export interface ChapterSummaryBlock extends ChapterSummary {
+  source: "chapter" | "outline";
+}
+
+export interface ChapterBriefBlock {
+  chapterNumber: number;
+  title: string;
+  text: string;
+  source: "chapter" | "digest" | "outline";
+}
+
 export interface ChapterContextInput {
   project: Project;
   bible: StoryBible;
   outlineChapter: OutlineChapter;
   nextOutlineChapter?: OutlineChapter;
   previousChapterText?: string;
+  /** Previous chapters whose full text is injected, normally only the latest one. */
+  recentChapters?: Chapter[];
+  /** Per-chapter 2-3 sentence summaries for the recent window. */
+  chapterBriefs?: ChapterBriefBlock[];
+  /** Five-chapter rolling summaries covering chapters older than the brief window. */
+  summaries?: ChapterSummaryBlock[];
+  /** SQLite ledger records visible up to the current chapter. */
+  foreshadowLedger?: ForeshadowRecord[];
   cast: Character[];
   state: StoryState;
   foreshadow: ForeshadowContextEntry[];
@@ -26,6 +49,9 @@ export interface ChapterContextInput {
 }
 
 const RECENT_EVENT_LIMIT = 10;
+const FULL_TEXT_CHAPTER_WINDOW = 1;
+const CHAPTER_BRIEF_WINDOW = 8;
+const ROLLING_SUMMARY_START_GAP = 10;
 
 function orNone(values: readonly string[]): string {
   return values.length > 0 ? values.join("、") : "（无）";
@@ -233,6 +259,246 @@ export function previousTail(text: string, maxChars = 2000): string {
   return characters.slice(Math.max(0, characters.length - limit)).join("");
 }
 
+export function recentChaptersFor(
+  chapters: readonly Chapter[],
+  currentChapter: number,
+  limit = FULL_TEXT_CHAPTER_WINDOW,
+): Chapter[] {
+  return [...chapters]
+    .filter((chapter) => chapter.number < currentChapter)
+    .sort((left, right) => left.number - right.number)
+    .slice(-limit);
+}
+
+/**
+ * Builds the per-chapter brief used in the recent chapter-summary window. New
+ * chapters always have `brief`; legacy chapters fall back to their digest or
+ * outline so older books still get a usable middle tier.
+ */
+export function chapterBriefFor(chapter: Chapter): ChapterBriefBlock | undefined {
+  const brief = chapter.brief?.trim();
+  if (brief) {
+    return {
+      chapterNumber: chapter.number,
+      title: chapter.title,
+      text: brief,
+      source: "chapter",
+    };
+  }
+
+  const nodes = (chapter.digest?.plotNodes ?? [])
+    .map((node) => node.summary.trim())
+    .filter((summary) => summary.length > 0)
+    .slice(0, 3);
+  const hook = chapter.outline.hook.trim();
+  if (nodes.length > 0) {
+    return {
+      chapterNumber: chapter.number,
+      title: chapter.title,
+      text: [nodes.join("；"), hook ? `章末钩子：${hook}` : ""]
+        .filter((part) => part.length > 0)
+        .join("；"),
+      source: "digest",
+    };
+  }
+
+  const outlineSummary = chapter.outline.summary.trim();
+  if (outlineSummary.length === 0) return undefined;
+  return {
+    chapterNumber: chapter.number,
+    title: chapter.title,
+    text: outlineSummary,
+    source: "outline",
+  };
+}
+
+/**
+ * Selects per-chapter briefs for chapters N-2 through N-9. The full text of
+ * N-1 is already injected separately.
+ */
+export function selectChapterBriefBlocks(
+  chapters: readonly Chapter[],
+  currentChapter: number,
+): ChapterBriefBlock[] {
+  const fromChapter = Math.max(
+    1,
+    currentChapter - (FULL_TEXT_CHAPTER_WINDOW + CHAPTER_BRIEF_WINDOW),
+  );
+  const toChapter = currentChapter - (FULL_TEXT_CHAPTER_WINDOW + 1);
+
+  return [...chapters]
+    .filter(
+      (chapter) =>
+        chapter.number >= fromChapter &&
+        chapter.number <= toChapter &&
+        chapter.text.trim().length > 0,
+    )
+    .sort((left, right) => left.number - right.number)
+    .flatMap((chapter) => {
+      const block = chapterBriefFor(chapter);
+      return block === undefined ? [] : [block];
+    });
+}
+
+function outlineChapters(outline: Outline): OutlineChapter[] {
+  return outline.volumes.flatMap((volume) =>
+    volume.stages.flatMap((stage) => stage.chapters),
+  );
+}
+
+function outlineFallbackSummary(
+  outline: Outline,
+  fromChapter: number,
+  toChapter: number,
+): string {
+  return outlineChapters(outline)
+    .filter(
+      (chapter) =>
+        chapter.number >= fromChapter && chapter.number <= toChapter,
+    )
+    .map((chapter) => `第${chapter.number}章：${chapter.summary}`)
+    .join("；");
+}
+
+/**
+ * Selects the rolling summary blocks injected before chapter N. Chapters N-2
+ * through N-9 use per-chapter briefs, so rolling summaries start at N-14 and
+ * cover five chapters each: [N-14, N-10], [N-19, N-15], [N-24, N-20], ...
+ * The stored summary lives on the block's last chapter (N-10, N-15, ...).
+ * When a legacy chapter has no stored summary, the outline summary is used.
+ */
+export function selectRollingSummaryBlocks(
+  chapters: readonly Chapter[],
+  outline: Outline | undefined,
+  currentChapter: number,
+): ChapterSummaryBlock[] {
+  const byNumber = new Map(chapters.map((chapter) => [chapter.number, chapter]));
+  const blocks: ChapterSummaryBlock[] = [];
+
+  for (
+    let anchor = currentChapter - ROLLING_SUMMARY_START_GAP;
+    anchor >= 1;
+    anchor -= 5
+  ) {
+    const fromChapter = Math.max(1, anchor - 4);
+    const stored = byNumber.get(anchor)?.summary;
+    if (stored) {
+      blocks.push({ ...stored, source: "chapter" });
+      continue;
+    }
+
+    if (!outline) continue;
+    const text = outlineFallbackSummary(outline, fromChapter, anchor);
+    if (text.length === 0) continue;
+    blocks.push({
+      fromChapter,
+      toChapter: anchor,
+      text,
+      source: "outline",
+    });
+  }
+
+  return blocks.sort((left, right) => left.fromChapter - right.fromChapter);
+}
+
+export function chapterHeading(chapter: {
+  number: number;
+  title: string;
+}): string {
+  return /^第\s*(?:\d+|[零〇一二三四五六七八九十百千万两]+)\s*章/u.test(
+    chapter.title,
+  )
+    ? chapter.title
+    : `第${chapter.number}章 ${chapter.title}`;
+}
+
+function formatRecentChapters(chapters: readonly Chapter[]): string {
+  if (chapters.length === 0) return "上一章全文：（无）";
+
+  const range =
+    chapters.length === 1
+      ? `第${chapters[0]!.number}章`
+      : `第${chapters[0]!.number}-${chapters[chapters.length - 1]!.number}章`;
+
+  return [
+    `上一章全文（${range}，按时间顺序，仅用于承接，不要复述）：`,
+    ...chapters.map(
+      (chapter) => `【${chapterHeading(chapter)}】\n${chapter.text}`,
+    ),
+  ].join("\n\n");
+}
+
+function formatChapterBriefs(blocks: readonly ChapterBriefBlock[]): string {
+  if (blocks.length === 0) return "逐章摘要：（无）";
+
+  const first = blocks[0]!;
+  const last = blocks[blocks.length - 1]!;
+  return [
+    `逐章摘要（第${first.chapterNumber}-${last.chapterNumber}章，每章 2–3 句，按时间顺序；先用它判断事件和因果，需要更多细节时用 story_recall 展开，再用 chapter_read 核对原文）：`,
+    ...blocks.map((block) => {
+      const source =
+        block.source === "digest"
+          ? "（据章节档案整理）"
+          : block.source === "outline"
+            ? "（大纲回退）"
+            : "";
+      return `- ${chapterHeading({
+        number: block.chapterNumber,
+        title: block.title,
+      })}${source}：${block.text}`;
+    }),
+  ].join("\n");
+}
+
+function formatSummaryBlocks(blocks: readonly ChapterSummaryBlock[]): string {
+  if (blocks.length === 0) return "更早章节滚动摘要：（无）";
+
+  const range = `${blocks[0]!.fromChapter}-${blocks[blocks.length - 1]!.toChapter}`;
+
+  return [
+    `更早章节滚动摘要（第${range}章，每 5 章一块，按时间顺序；先用它定位时间段，再通过逐章摘要和原文逐层核对，不要用滚动摘要补写具体细节）：`,
+    ...blocks.map(
+      (block) =>
+        `${block.fromChapter}-${block.toChapter}章滚动摘要：${block.text}`,
+    ),
+  ].join("\n");
+}
+
+function formatForeshadowLedger(
+  records: readonly ForeshadowRecord[],
+  currentChapter: number,
+): string {
+  const visible = records.filter(
+    (record) =>
+      record.setupChapter <= currentChapter &&
+      (record.resolvedChapter === undefined ||
+        record.resolvedChapter <= currentChapter),
+  );
+  const resolved = visible.filter((record) => record.status === "resolved");
+  const unresolved = visible.filter((record) => record.status !== "resolved");
+
+  const formatResolved = (record: ForeshadowRecord): string =>
+    `- ${record.title}｜设置=第${record.setupChapter}章｜回收=第${
+      record.resolvedChapter ?? "?"
+    }章｜status=${record.status}${record.note ? `｜note=${record.note}` : ""}`;
+
+  const formatUnresolved = (record: ForeshadowRecord): string =>
+    `- ${record.title}｜设置=第${record.setupChapter}章｜计划回收=${
+      record.plannedPayoffChapter === undefined
+        ? "未定"
+        : `第${record.plannedPayoffChapter}章`
+    }｜status=${record.status}${record.note ? `｜note=${record.note}` : ""}`;
+
+  return [
+    "已回收伏笔：",
+    resolved.length > 0 ? resolved.map(formatResolved).join("\n") : "- （无）",
+    "未回收伏笔（需要伏笔原文或历史进展时，用 story_digest 查看设置章节，必要时 chapter_read 读原文）：",
+    unresolved.length > 0
+      ? unresolved.map(formatUnresolved).join("\n")
+      : "- （无）",
+  ].join("\n");
+}
+
 export function buildChapterContext(input: ChapterContextInput): string {
   const {
     project,
@@ -240,6 +506,10 @@ export function buildChapterContext(input: ChapterContextInput): string {
     outlineChapter,
     nextOutlineChapter,
     previousChapterText,
+    recentChapters,
+    chapterBriefs,
+    summaries,
+    foreshadowLedger,
     cast,
     state,
     foreshadow,
@@ -319,10 +589,22 @@ export function buildChapterContext(input: ChapterContextInput): string {
       : "下一章边界：（无，本章为最后一章，必须在本章内收束）",
   );
 
-  if (previousChapterText !== undefined && previousChapterText.length > 0) {
+  if (recentChapters !== undefined && recentChapters.length > 0) {
+    sections.push(formatRecentChapters(recentChapters));
+  } else if (
+    previousChapterText !== undefined &&
+    previousChapterText.length > 0
+  ) {
     sections.push(
-      `上一章结尾（仅用于承接，不要复述）：\n${previousTail(previousChapterText)}`,
+      `上一章全文（仅用于承接，不要复述）：\n${previousChapterText}`,
     );
+  }
+
+  if (chapterBriefs !== undefined && chapterBriefs.length > 0) {
+    sections.push(formatChapterBriefs(chapterBriefs));
+  }
+  if (summaries !== undefined && summaries.length > 0) {
+    sections.push(formatSummaryBlocks(summaries));
   }
 
   sections.push(
@@ -342,7 +624,9 @@ export function buildChapterContext(input: ChapterContextInput): string {
       "关系：",
       formatRelationships(state, allowedCast),
       "伏笔状态：",
-      formatStateForeshadows(state, outlineChapter.number),
+      foreshadowLedger !== undefined
+        ? "- 见下方伏笔账本"
+        : formatStateForeshadows(state, outlineChapter.number),
       "最近事件：",
       formatEvents(state, outlineChapter.number),
     ].join("\n"),
@@ -356,12 +640,14 @@ export function buildChapterContext(input: ChapterContextInput): string {
   );
 
   sections.push(
-    [
-      "开放伏笔：",
-      openForeshadows.length > 0
-        ? openForeshadows.map(formatForeshadow).join("\n")
-        : "- （无）",
-    ].join("\n"),
+    foreshadowLedger !== undefined
+      ? formatForeshadowLedger(foreshadowLedger, outlineChapter.number)
+      : [
+          "开放伏笔：",
+          openForeshadows.length > 0
+            ? openForeshadows.map(formatForeshadow).join("\n")
+            : "- （无）",
+        ].join("\n"),
   );
 
   return sections.join("\n\n");

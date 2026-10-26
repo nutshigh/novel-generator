@@ -27,6 +27,15 @@ interface TocResponse {
     stages: Array<{
       chapters: Array<{
         number: number;
+        title: string;
+        summary: string;
+        pov: string;
+        cast: string[];
+        goal: string;
+        conflict: string;
+        turn: string;
+        reveal: string;
+        hook: string;
         status: string;
         hasText: boolean;
         wordCount: number;
@@ -154,6 +163,16 @@ describe("library and continuation API", () => {
       "missing",
       "missing",
     ]);
+    expect(tocChapters(outlineToc)[0]).toMatchObject({
+      number: 1,
+      pov: "林砚",
+      goal: expect.any(String),
+      conflict: expect.any(String),
+      turn: expect.any(String),
+      reveal: expect.any(String),
+      hook: expect.any(String),
+    });
+    expect(Array.isArray(tocChapters(outlineToc)[0]!.cast)).toBe(true);
 
     const missingChapter = await fetch(
       `${baseUrl}/api/projects/${created.projectId}/chapters/1`,
@@ -217,6 +236,55 @@ describe("library and continuation API", () => {
     expect(chapter.number).toBe(1);
     expect(chapter.text.length).toBeGreaterThan(0);
     expect(chapter.wordCount).toBeGreaterThan(0);
+
+    const promptLogResponse = await fetch(
+      `${baseUrl}/api/projects/${created.projectId}/prompt-log?chapterNumber=1&limit=100`,
+    );
+    expect(promptLogResponse.status).toBe(200);
+    const promptLog = (await promptLogResponse.json()) as {
+      total: number;
+      entries: Array<{
+        source: string;
+        kind: string;
+        chapterNumber?: number;
+        prompt: string;
+        replies: Array<{ text: string }>;
+      }>;
+    };
+    expect(promptLog.total).toBeGreaterThan(0);
+    expect(
+      promptLog.entries.some(
+        (entry) =>
+          entry.source === "model" &&
+          entry.kind === "chapter" &&
+          entry.chapterNumber === 1,
+      ),
+    ).toBe(true);
+    expect(promptLog.entries.every((entry) => entry.prompt.length > 0)).toBe(
+      true,
+    );
+    expect(
+      promptLog.entries.some((entry) => entry.replies.length > 0),
+    ).toBe(true);
+
+    const foreshadowResponse = await fetch(
+      `${baseUrl}/api/projects/${created.projectId}/foreshadows?chapterNumber=1`,
+    );
+    expect(foreshadowResponse.status).toBe(200);
+    const foreshadowPayload = (await foreshadowResponse.json()) as {
+      available: boolean;
+      records: Array<{
+        title: string;
+        setupChapter: number;
+        status: string;
+      }>;
+      counts: { total: number; open: number };
+    };
+    expect(foreshadowPayload.available).toBe(true);
+    expect(foreshadowPayload.counts.total).toBeGreaterThan(0);
+    expect(foreshadowPayload.records[0]).toMatchObject({
+      setupChapter: 1,
+    });
   });
 
   it("finishes a batch, extends the outline, and writes on demand over HTTP", async () => {

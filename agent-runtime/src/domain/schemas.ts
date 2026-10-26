@@ -19,6 +19,12 @@ export const ProjectSchema = z.object({
   chapterWords: z.number().int().min(200).max(20_000),
   maxChapters: z.number().int().min(1),
   status: ProjectStatusSchema,
+  /**
+   * Legacy quality gate. Director mode turns review, revision and ending audit
+   * off; set this to true only when the deterministic pipeline should re-enable
+   * those extra model calls.
+   */
+  reviewEnabled: z.boolean().default(false),
   createdAt: z.string().datetime({ offset: true }),
 });
 export type Project = z.infer<typeof ProjectSchema>;
@@ -279,6 +285,75 @@ export const ChapterStatusSchema = z.enum([
 ]);
 export type ChapterStatus = z.infer<typeof ChapterStatusSchema>;
 
+export const DigestSettingSchema = z.object({
+  type: z.string(),
+  name: z.string(),
+  detail: z.string(),
+});
+export type DigestSetting = z.infer<typeof DigestSettingSchema>;
+
+export const DigestCharacterSchema = z.object({
+  name: z.string(),
+  roleInChapter: z.string(),
+  goal: z.string(),
+  change: z.string(),
+});
+export type DigestCharacter = z.infer<typeof DigestCharacterSchema>;
+
+export const DigestPlotNodeSchema = z.object({
+  summary: z.string(),
+  impact: z.string(),
+});
+export type DigestPlotNode = z.infer<typeof DigestPlotNodeSchema>;
+
+export const DigestRelationshipSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+  change: z.string(),
+  reason: z.string(),
+});
+export type DigestRelationship = z.infer<typeof DigestRelationshipSchema>;
+
+export const DigestForeshadowActionSchema = z.enum([
+  "setup",
+  "progress",
+  "payoff",
+  "mention",
+]);
+export type DigestForeshadowAction = z.infer<
+  typeof DigestForeshadowActionSchema
+>;
+
+export const DigestForeshadowSchema = z.object({
+  title: z.string(),
+  action: DigestForeshadowActionSchema,
+  note: z.string().default(""),
+});
+export type DigestForeshadow = z.infer<typeof DigestForeshadowSchema>;
+
+export const ChapterDigestSchema = z.object({
+  coreSettings: z.array(DigestSettingSchema),
+  characters: z.array(DigestCharacterSchema),
+  plotNodes: z.array(DigestPlotNodeSchema),
+  relationshipProgress: z.array(DigestRelationshipSchema),
+  foreshadows: z.array(DigestForeshadowSchema),
+});
+export type ChapterDigest = z.infer<typeof ChapterDigestSchema>;
+
+export const ChapterSummarySchema = z.object({
+  fromChapter: z.number().int().positive(),
+  toChapter: z.number().int().positive(),
+  text: z.string(),
+});
+export type ChapterSummary = z.infer<typeof ChapterSummarySchema>;
+
+export const ChapterMemorySchema = z.object({
+  digest: ChapterDigestSchema,
+  brief: z.string(),
+  summary: ChapterSummarySchema,
+});
+export type ChapterMemory = z.infer<typeof ChapterMemorySchema>;
+
 export const ChapterSchema = z.object({
   number: z.number().int().positive(),
   title: z.string(),
@@ -287,6 +362,10 @@ export const ChapterSchema = z.object({
   wordCount: z.number().int().nonnegative(),
   review: ReviewSchema.optional(),
   stateSnapshot: StoryStateSchema.optional(),
+  digest: ChapterDigestSchema.optional(),
+  /** Two-to-three sentence summary of this chapter only. */
+  brief: z.string().optional(),
+  summary: ChapterSummarySchema.optional(),
   status: ChapterStatusSchema,
 });
 export type Chapter = z.infer<typeof ChapterSchema>;
@@ -420,6 +499,19 @@ export function validateChapter(chapter: Chapter): string[] {
     if (entity.updatedAtChapter > chapter.number) {
       issues.push(
         `Chapter ${chapter.number} state snapshot contains entity ${entity.entityName} updated in chapter ${entity.updatedAtChapter}.`,
+      );
+    }
+  }
+
+  if (chapter.summary) {
+    if (chapter.summary.toChapter !== chapter.number) {
+      issues.push(
+        `Chapter ${chapter.number} summary ends at chapter ${chapter.summary.toChapter}.`,
+      );
+    }
+    if (chapter.summary.fromChapter > chapter.summary.toChapter) {
+      issues.push(
+        `Chapter ${chapter.number} summary starts after it ends.`,
       );
     }
   }

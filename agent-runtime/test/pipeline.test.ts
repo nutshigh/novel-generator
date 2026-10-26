@@ -323,6 +323,7 @@ describe("runNovelPipeline", () => {
       project,
       ai: new FakeAiGateway(),
       store,
+      reviewEnabled: true,
       onProgress: (event) => progress.push(event),
     });
 
@@ -375,9 +376,18 @@ describe("runNovelPipeline", () => {
       "chapter-003.json",
       "book.md",
       "book.txt",
+      "review-log.jsonl",
     ]) {
       expect(store.getArtifact(project.id, name), name).toBeDefined();
     }
+
+    const reviewLog = store
+      .getArtifact(project.id, "review-log.jsonl")!
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(reviewLog.every((entry) => !("text" in entry))).toBe(true);
+    expect(reviewLog.some((entry) => entry.type === "review")).toBe(true);
 
     const savedChapters = JSON.parse(
       store.getArtifact(project.id, "chapters.json")!,
@@ -405,7 +415,7 @@ describe("runNovelPipeline", () => {
     );
     const ai = new SeamRepairPipelineGateway();
 
-    const result = await runNovelPipeline({ project, ai, store });
+    const result = await runNovelPipeline({ project, ai, store, reviewEnabled: true });
 
     expect(ai.repairCalls).toBe(1);
     expect(result.chapters[1]!.text.startsWith("第二天早上")).toBe(true);
@@ -431,12 +441,31 @@ describe("runNovelPipeline", () => {
     );
     const ai = new ReviseOnceGateway();
 
-    const result = await runNovelPipeline({ project, ai, store });
+    const result = await runNovelPipeline({ project, ai, store, reviewEnabled: true });
 
     expect(ai.reviseCalls).toBe(1);
     expect(ai.reviewCalls).toBe(2);
     expect(result.chapters[0]!.review?.gate).toBe("pass");
     expect(result.chapters[0]!.status).toBe("committed");
+
+    const reviewLog = store
+      .getArtifact(project.id, "review-log.jsonl")!
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, any>);
+    expect(
+      reviewLog.some(
+        (entry) =>
+          entry.type === "review" &&
+          entry.stage === "initial" &&
+          entry.review?.issues?.[0]?.fix === "改写为顾沉出现，并保留对峙张力。",
+      ),
+    ).toBe(true);
+    expect(
+      reviewLog.some(
+        (entry) => entry.type === "revision_decision" && entry.accepted === true,
+      ),
+    ).toBe(true);
   });
 
   it("keeps the original chapter when a revised block ranks lower", async () => {
@@ -454,7 +483,7 @@ describe("runNovelPipeline", () => {
       revisedMarker.repeat(80),
     );
 
-    const result = await runNovelPipeline({ project, ai, store });
+    const result = await runNovelPipeline({ project, ai, store, reviewEnabled: true });
 
     expect(ai.reviseCalls).toBe(1);
     expect(ai.reviewCalls).toBe(2);
@@ -499,6 +528,7 @@ describe("runNovelPipeline", () => {
       project,
       ai,
       store,
+      reviewEnabled: true,
       onProgress: (event) => progress.push(event),
     });
 
@@ -525,7 +555,7 @@ describe("runNovelPipeline", () => {
       shortRevision,
     );
 
-    const result = await runNovelPipeline({ project, ai, store });
+    const result = await runNovelPipeline({ project, ai, store, reviewEnabled: true });
 
     expect(ai.reviseCalls).toBe(1);
     expect(ai.reviewCalls).toBe(2);
@@ -545,7 +575,7 @@ describe("runNovelPipeline", () => {
     );
     const ai = new IncompleteEndingGateway();
 
-    const result = await runNovelPipeline({ project, ai, store });
+    const result = await runNovelPipeline({ project, ai, store, reviewEnabled: true });
 
     expect(ai.audits).toBe(2);
     expect(ai.finishCalls).toBe(1);
@@ -568,7 +598,7 @@ describe("runNovelPipeline", () => {
       revisedMarker.repeat(80),
     );
 
-    const result = await runNovelPipeline({ project, ai, store });
+    const result = await runNovelPipeline({ project, ai, store, reviewEnabled: true });
 
     expect(ai.reviseCalls).toBe(1);
     expect(ai.reviewCalls).toBe(2);
@@ -592,6 +622,7 @@ describe("runNovelPipeline", () => {
       project,
       ai: new FilteringStateGateway(),
       store,
+      reviewEnabled: true,
       onProgress: (event) => progress.push(event),
     });
 
@@ -625,6 +656,7 @@ describe("runNovelPipeline", () => {
       project,
       ai,
       store,
+      reviewEnabled: true,
       onProgress: (event) => progress.push(event),
     });
 
@@ -656,6 +688,7 @@ describe("runNovelPipeline", () => {
       project,
       ai: new BlockingGateway(),
       store,
+      reviewEnabled: true,
     });
 
     expect(result.chapters[0]!.review?.gate).toBe("block");

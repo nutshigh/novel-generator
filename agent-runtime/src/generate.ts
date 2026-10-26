@@ -1,4 +1,8 @@
 import { resolve, join } from "node:path";
+import {
+  createEnvDirectorModelHandle,
+  createPiDirectorSessionFactory,
+} from "./agent/directorSession.js";
 import { FakeAiGateway } from "./ai/fakeGateway.js";
 import type { AiGateway } from "./ai/gateway.js";
 import { loadConfig } from "./config.js";
@@ -12,6 +16,7 @@ interface GenerateOptions {
   fake: boolean;
   chapters?: number;
   words?: number;
+  review: boolean;
   outDir: string;
 }
 
@@ -50,6 +55,7 @@ function parseArgs(argv: string[]): GenerateOptions {
   let fake = false;
   let chapters: number | undefined;
   let words: number | undefined;
+  let review = false;
   let outDir = "output";
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -58,6 +64,11 @@ function parseArgs(argv: string[]): GenerateOptions {
 
     if (arg === "--fake") {
       fake = true;
+      continue;
+    }
+
+    if (arg === "--review") {
+      review = true;
       continue;
     }
 
@@ -95,11 +106,11 @@ function parseArgs(argv: string[]): GenerateOptions {
   const premise = premiseParts.join(" ").trim();
   if (premise.length === 0) {
     throw new Error(
-      'A premise is required. Usage: npm run generate -- "一句话" [--fake] [--chapters N] [--words N] [--out DIR]',
+      'A premise is required. Usage: npm run generate -- "一句话" [--fake] [--review] [--chapters N] [--words N] [--out DIR]',
     );
   }
 
-  return { premise, fake, chapters, words, outDir };
+  return { premise, fake, chapters, words, review, outDir };
 }
 
 async function createGateway(fake: boolean): Promise<AiGateway> {
@@ -131,6 +142,7 @@ async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const project = createProject({
     premise: options.premise,
+    reviewEnabled: options.review,
     ...(options.chapters === undefined ? {} : { maxChapters: options.chapters }),
     ...(options.words === undefined ? {} : { chapterWords: options.words }),
   });
@@ -138,11 +150,18 @@ async function main(): Promise<void> {
   const store = new JsonProjectStore(outRoot);
   const savedProject = await store.createProject(project);
   const ai = await createGateway(options.fake);
+  const directorSessionFactory =
+    options.fake || process.env.NOVELBUILDER_FAKE === "1"
+      ? undefined
+      : createPiDirectorSessionFactory(createEnvDirectorModelHandle().config);
 
   const result = await runNovelPipeline({
     project: savedProject,
     ai,
     store,
+    ...(directorSessionFactory === undefined
+      ? {}
+      : { directorSessionFactory }),
     onProgress: (event) => {
       process.stderr.write(`${progressLine(event)}\n`);
     },

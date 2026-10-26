@@ -19,7 +19,11 @@ export interface NovelAgentSession {
 
 export async function createNovelAgentSession(
   config: AgentRuntimeConfig = loadConfig(),
-  options: { customTools?: ToolDefinition[] } = {},
+  options: {
+    customTools?: ToolDefinition[];
+    systemPrompt?: string;
+    sessionManager?: SessionManager;
+  } = {},
 ): Promise<NovelAgentSession> {
   mkdirSync(config.agentDir, { recursive: true });
   mkdirSync(config.projectDir, { recursive: true });
@@ -62,7 +66,7 @@ export async function createNovelAgentSession(
     noSkills: true,
     noPromptTemplates: true,
     noContextFiles: true,
-    systemPromptOverride: () => config.systemPrompt,
+    systemPromptOverride: () => options.systemPrompt ?? config.systemPrompt,
   });
   await resourceLoader.reload();
 
@@ -74,7 +78,12 @@ export async function createNovelAgentSession(
     resourceLoader,
     noTools: "builtin",
     customTools: options.customTools ?? [echoTool],
-    sessionManager: SessionManager.create(config.projectDir, resolve(config.agentDir, "sessions")),
+    sessionManager:
+      options.sessionManager ??
+      SessionManager.create(
+        config.projectDir,
+        resolve(config.agentDir, "sessions"),
+      ),
     settingsManager,
   });
 

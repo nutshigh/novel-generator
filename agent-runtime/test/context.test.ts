@@ -104,7 +104,8 @@ describe("buildChapterContext", () => {
     expect(context).toContain("下一章");
     expect(context).toContain(nextOutlineChapter.summary);
     expect(context).not.toContain(nextOutlineChapter.reveal);
-    expect(context).toContain("上一章结尾");
+    expect(context).toContain("上一章全文");
+    expect(context).toContain(previousChapterText);
     expect(context).toContain("林砚");
     expect(context).toContain("苏晚");
     expect(context).toContain(cast[0]!.goal);
@@ -381,6 +382,6 @@ describe("buildChapterContext", () => {
 
     expect(context).toContain("下一章");
     expect(context).toContain("无");
-    expect(context).not.toContain("上一章结尾");
+    expect(context).not.toContain("上一章全文");
   });
 });

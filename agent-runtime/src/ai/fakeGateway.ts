@@ -491,6 +491,66 @@ export class FakeAiGateway implements AiGateway {
         });
       }
 
+      case "chapter_memory": {
+        const chapterNumber = markerNumber(req.user, "CHAPTER_NUMBER", 1);
+        const fromChapter = markerNumber(
+          req.user,
+          "SUMMARY_FROM",
+          Math.max(1, chapterNumber - 4),
+        );
+        const toChapter = markerNumber(
+          req.user,
+          "SUMMARY_TO",
+          chapterNumber,
+        );
+        return JSON.stringify({
+          brief: `第${chapterNumber}章，林砚继续追查旧城线索，并付出了一点代价。章末的新线索把调查推向下一处地点。`,
+          digest: {
+            coreSettings: [
+              {
+                type: "world",
+                name: "地脉",
+                detail: `第${chapterNumber}章继续确认灵力来自地脉。`,
+              },
+            ],
+            characters: [
+              {
+                name: "林砚",
+                roleInChapter: "主角",
+                goal: `完成第${chapterNumber}章的调查`,
+                change: "掌握了新的线索，但付出了一点代价。",
+              },
+            ],
+            plotNodes: [
+              {
+                summary: `林砚在第${chapterNumber}章追查旧城线索。`,
+                impact: "线索指向下一处地点。",
+              },
+            ],
+            relationshipProgress: [
+              {
+                source: "林砚",
+                target: "苏晚",
+                change: "信任略有增加",
+                reason: "两人共同承担了一次风险。",
+              },
+            ],
+            foreshadows: [
+              {
+                title: "地脉印的裂纹",
+                action: "progress",
+                note: `第${chapterNumber}章裂纹继续扩大。`,
+              },
+            ],
+          },
+          summary: {
+            fromChapter,
+            toChapter,
+            text: `第${fromChapter}到${toChapter}章，林砚与苏晚继续追查旧城大火与地脉印的线索。两人在一次次试探中建立了更深的信任，也发现顾沉与玄烬宗的禁术有关。章末的新线索把调查推向下一处地点。`,
+          },
+        });
+      }
+
       case "state": {
         const chapterNumber = markerNumber(req.user, "CHAPTER_NUMBER", 1);
         return JSON.stringify(StoryStateSchema.parse(makeState(chapterNumber)));
